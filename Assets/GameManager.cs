@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour
     public Camera mainCamera;   
     [Header("摄像机设置")]
     [SerializeField] private float cameraSize = 50f;  // 正交摄像机大小
-    [SerializeField] private Color backgroundColor = Color.white;
+    [SerializeField] private Color backgroundColor = Color.black;
 
     [Header("游戏设置")]
     public GameObject charPrefab;
@@ -31,7 +31,6 @@ public class GameManager : MonoBehaviour
         mainCamera.orthographicSize = cameraSize;
         mainCamera.backgroundColor = backgroundColor;
         mainCamera.transform.position = new Vector3(0, 0, -10f);
-        
     }
 
     void Start()

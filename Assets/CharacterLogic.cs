@@ -8,16 +8,16 @@ public class CharacterLogic : MonoBehaviour
 
     [Header("移动设置")]
     public float moveSpeed = 4f;
-    public float smoothSpeed = 10f;  // 新增：平滑过渡速度
+    public float smoothSpeed = 10f;
     private Rigidbody2D rb;
     private Vector2 moveDir;
-    private Vector2 smoothMoveDir;  // 新增：平滑后的移动方向
+    private Vector2 smoothMoveDir;
     private Vector2 lastMoveDir = Vector2.right; 
     private bool isStopped = false;
 
     [Header("攻击设置")]
     public float attackRange = 1.5f;
-    public float attackCooldown = 0.5f;
+    public float attackCooldown = 5f;
     private float lastAttackTime = 0f;
     
     private Camera mainCamera;
@@ -25,7 +25,7 @@ public class CharacterLogic : MonoBehaviour
 
     void Awake() {
         rb = GetComponent<Rigidbody2D>();
-        smoothMoveDir = Vector2.zero;  // 初始化
+        smoothMoveDir = Vector2.zero;
         mainCamera = Camera.main;
         if (mainCamera != null) {
             CalculateBounds();
@@ -33,7 +33,7 @@ public class CharacterLogic : MonoBehaviour
     }
 
     void Start() {
-        if (currentRole == Role.Bot) StartCoroutine(UnspottableBotRoutine());
+        if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
     }
 
     void Update() {
@@ -42,7 +42,6 @@ public class CharacterLogic : MonoBehaviour
     }
 
     void FixedUpdate() {
-        // 平滑过渡
         smoothMoveDir = Vector2.MoveTowards(smoothMoveDir, moveDir, smoothSpeed * Time.fixedDeltaTime);
         
         LimitToScreen();
@@ -51,7 +50,7 @@ public class CharacterLogic : MonoBehaviour
         if (isStopped && smoothMoveDir == Vector2.zero) {
             rb.velocity = Vector2.zero;
         } else {
-            rb.velocity = smoothMoveDir * moveSpeed;  // 使用平滑后的方向
+            rb.velocity = smoothMoveDir * moveSpeed;
         }
     }
     
@@ -90,28 +89,58 @@ public class CharacterLogic : MonoBehaviour
     }
 
     void HandleP1() {
-        float x = 0; float y = 0;
-        if (Input.GetKey(KeyCode.W)) y = 1;
-        else if (Input.GetKey(KeyCode.S)) y = -1;
-        if (Input.GetKey(KeyCode.A)) x = -1;
-        else if (Input.GetKey(KeyCode.D)) x = 1;
-        ProcessInput(x, y);
+        // 修改：使用独立的按键检测，允许同时按下
+        float x = 0;
+        float y = 0;
+        
+        // 垂直方向
+        if (Input.GetKey(KeyCode.W)) y += 1;
+        if (Input.GetKey(KeyCode.S)) y -= 1;  // 移除else，允许同时检测
+        
+        // 水平方向
+        if (Input.GetKey(KeyCode.A)) x -= 1;
+        if (Input.GetKey(KeyCode.D)) x += 1;  // 移除else，允许同时检测
+        
+        // 标准化输入向量
+        Vector2 rawInput = new Vector2(x, y);
+        
+        // 如果有输入，进行标准化
+        if (rawInput.magnitude > 0) {
+            rawInput.Normalize();
+        }
+        
+        // 调用ProcessInput
+        ProcessInput(rawInput.x, rawInput.y);
+        
         if (Input.GetKeyDown(KeyCode.F) && CanAttack()) Attack();
     }
 
     void HandleP2() {
-        float x = 0; float y = 0;
-        if (Input.GetKey(KeyCode.UpArrow)) y = 1;
-        else if (Input.GetKey(KeyCode.DownArrow)) y = -1;
-        if (Input.GetKey(KeyCode.LeftArrow)) x = -1;
-        else if (Input.GetKey(KeyCode.RightArrow)) x = 1;
-        ProcessInput(x, y);
+        float x = 0;
+        float y = 0;
+        
+        // 垂直方向
+        if (Input.GetKey(KeyCode.UpArrow)) y += 1;
+        if (Input.GetKey(KeyCode.DownArrow)) y -= 1;
+        
+        // 水平方向
+        if (Input.GetKey(KeyCode.LeftArrow)) x -= 1;
+        if (Input.GetKey(KeyCode.RightArrow)) x += 1;
+        
+        Vector2 rawInput = new Vector2(x, y);
+        if (rawInput.magnitude > 0) {
+            rawInput.Normalize();
+        }
+        
+        ProcessInput(rawInput.x, rawInput.y);
+        
         if ((Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Alpha0)) && CanAttack()) Attack();
     }
 
     void ProcessInput(float x, float y) {
-        Vector2 input = new Vector2(x, y).normalized;
-        if (input != Vector2.zero) {
+        Vector2 input = new Vector2(x, y);
+        if (input.magnitude > 0.1f) {  // 使用小阈值避免抖动
+            input.Normalize();
             moveDir = input;
             lastMoveDir = input;
             isStopped = false; 
@@ -168,13 +197,6 @@ public class CharacterLogic : MonoBehaviour
                 yield return new WaitForSeconds(stopTime);
             }
         }
-    }
-
-    // 在编辑器里画出攻击范围，方便你调试
-    void OnDrawGizmosSelected() {
-        Gizmos.color = Color.yellow;
-        Vector2 center = (Vector2)transform.position + lastMoveDir * attackOffset;
-        Gizmos.DrawWireSphere(center, attackRadius);
     }
 
     void OnCollisionEnter2D(Collision2D collision) {
