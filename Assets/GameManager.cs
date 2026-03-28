@@ -7,6 +7,10 @@ public class GameManager : MonoBehaviour
 {
     // 单例模式：让 CharacterLogic 能够通过 GameManager.instance 找到这里
     public static GameManager instance;
+    public Camera mainCamera;   
+    [Header("摄像机设置")]
+    [SerializeField] private float cameraSize = 50f;  // 正交摄像机大小
+    [SerializeField] private Color backgroundColor = Color.white;
 
     [Header("游戏设置")]
     public GameObject charPrefab;
@@ -21,6 +25,13 @@ public class GameManager : MonoBehaviour
     {
         // 初始化单例
         instance = this;
+    
+        mainCamera = Camera.main;
+        mainCamera.orthographic = true;  // 2D 游戏使用正交投影
+        mainCamera.orthographicSize = cameraSize;
+        mainCamera.backgroundColor = backgroundColor;
+        mainCamera.transform.position = new Vector3(0, 0, -10f);
+        
     }
 
     void Start()

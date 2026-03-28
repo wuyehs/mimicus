@@ -8,150 +8,179 @@ public class CharacterLogic : MonoBehaviour
 
     [Header("移动设置")]
     public float moveSpeed = 4f;
+    public float smoothSpeed = 10f;  // 新增：平滑过渡速度
     private Rigidbody2D rb;
     private Vector2 moveDir;
+    private Vector2 smoothMoveDir;  // 新增：平滑后的移动方向
     private Vector2 lastMoveDir = Vector2.right; 
     private bool isStopped = false;
 
     [Header("攻击设置")]
-    public float attackRange = 1.5f; // 稍微调长一点点
+    public float attackRange = 1.5f;
+    public float attackCooldown = 0.5f;
+    private float lastAttackTime = 0f;
+    
+    private Camera mainCamera;
+    private float leftBound, rightBound, topBound, bottomBound;
 
     void Awake() {
         rb = GetComponent<Rigidbody2D>();
+        smoothMoveDir = Vector2.zero;  // 初始化
+        mainCamera = Camera.main;
+        if (mainCamera != null) {
+            CalculateBounds();
+        }
     }
 
     void Start() {
-        if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
+        if (currentRole == Role.Bot) StartCoroutine(UnspottableBotRoutine());
     }
 
     void Update() {
-        // 核心修改：使用具体的键位，实现真正的双人隔离
         if (currentRole == Role.Player1) HandleP1();
         else if (currentRole == Role.Player2) HandleP2();
     }
 
     void FixedUpdate() {
-    // 只有当既没有移动输入，且处于停止状态时，才锁死物理
-    if (isStopped && moveDir == Vector2.zero) {
-        rb.velocity = Vector2.zero;
-        // 锁死位移和旋转
-        rb.constraints = RigidbodyConstraints2D.FreezePosition | RigidbodyConstraints2D.FreezeRotation;
-    } else {
-        // 只要有任何移动意图，立刻解锁位移限制，只保留旋转锁定
+        // 平滑过渡
+        smoothMoveDir = Vector2.MoveTowards(smoothMoveDir, moveDir, smoothSpeed * Time.fixedDeltaTime);
+        
+        LimitToScreen();
         rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-        rb.velocity = moveDir * moveSpeed;
+        
+        if (isStopped && smoothMoveDir == Vector2.zero) {
+            rb.velocity = Vector2.zero;
+        } else {
+            rb.velocity = smoothMoveDir * moveSpeed;  // 使用平滑后的方向
+        }
     }
-}
+    
+    private void CalculateBounds() {
+        float size = mainCamera.orthographicSize;
+        float aspect = mainCamera.aspect;
+        
+        rightBound = size * aspect - 0.5f;
+        leftBound = -rightBound;
+        topBound = size - 0.5f;
+        bottomBound = -topBound;
+    }
+    
+    private void LimitToScreen() {
+        if (mainCamera == null) return;
+        
+        Vector2 pos = rb.position;
+        
+        if (pos.x < leftBound) {
+            pos.x = leftBound;
+            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
+        } else if (pos.x > rightBound) {
+            pos.x = rightBound;
+            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
+        }
+        
+        if (pos.y < bottomBound) {
+            pos.y = bottomBound;
+            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
+        } else if (pos.y > topBound) {
+            pos.y = topBound;
+            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
+        }
+        
+        if (pos != rb.position) rb.MovePosition(pos);
+    }
 
-    // --- P1: 严格锁定 WASD ---
     void HandleP1() {
         float x = 0; float y = 0;
         if (Input.GetKey(KeyCode.W)) y = 1;
         else if (Input.GetKey(KeyCode.S)) y = -1;
         if (Input.GetKey(KeyCode.A)) x = -1;
         else if (Input.GetKey(KeyCode.D)) x = 1;
-
         ProcessInput(x, y);
-
-        if (Input.GetKeyDown(KeyCode.F)) Attack();
+        if (Input.GetKeyDown(KeyCode.F) && CanAttack()) Attack();
     }
 
-    // --- P2: 严格锁定 方向键 + 小键盘0 ---
     void HandleP2() {
         float x = 0; float y = 0;
         if (Input.GetKey(KeyCode.UpArrow)) y = 1;
         else if (Input.GetKey(KeyCode.DownArrow)) y = -1;
         if (Input.GetKey(KeyCode.LeftArrow)) x = -1;
         else if (Input.GetKey(KeyCode.RightArrow)) x = 1;
-
         ProcessInput(x, y);
-
-        // 同时兼容大键盘0和小键盘0
-        if (Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Alpha0)) Attack();
+        if ((Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Alpha0)) && CanAttack()) Attack();
     }
 
-   void ProcessInput(float x, float y) {
-    Vector2 input = new Vector2(x, y).normalized;
-    
-    if (input != Vector2.zero) {
-        // 【关键】只要有输入，就强制打破停止状态
-        moveDir = input;
-        lastMoveDir = input;
-        isStopped = false; 
-    } else {
-        moveDir = Vector2.zero;
-        isStopped = true;
-    }
-}
-
-    void Attack() {
-    Debug.Log(currentRole + " 挥出一记重拳！");
-
-    // 1. 定义杀伤区的大小 (稍微比方块大一点，增加容错)
-    Vector2 hitBoxSize = new Vector2(1.2f, 1.2f);
-    
-    // 2. 计算杀伤区的中心点
-    // 我们把中心点往“上一次移动方向”偏移 0.8 个单位，确保它覆盖前方但不包含自己中心
-    Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
-
-    // 3. 【核心】区域扫描：抓取这个矩形范围内的所有碰撞体
-    Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, hitBoxSize, 0f);
-
-    // 4. 视觉辅助（仅在Scene窗口可见，帮你调试杀伤区位置）
-    // 你会看到一个红色的方框在出拳时闪现
-    Debug.Log("攻击中心点: " + hitBoxCenter);
-
-    foreach (var hit in hitColliders) {
-        // 排除掉自己，且不能是边界
-        if (hit.gameObject != this.gameObject && !hit.CompareTag("Boundary")) {
-            
-            Debug.Log(currentRole + " 成功击杀: " + hit.name);
-
-            // 检查被击中的是不是玩家
-            CharacterLogic target = hit.GetComponent<CharacterLogic>();
-            if (target != null) {
-                if (target.currentRole == Role.Player1) {
-                    GameManager.instance.EndGame("玩家二 (红) 获胜！");
-                } else if (target.currentRole == Role.Player2) {
-                    GameManager.instance.EndGame("玩家一 (蓝) 获胜！");
-                }
-            }
-
-            // 摧毁目标
-            Destroy(hit.gameObject);
-            
-            // 如果你只想一拳打死一个人，就加个 return；想一拳打死一片，就不加
-            return; 
+    void ProcessInput(float x, float y) {
+        Vector2 input = new Vector2(x, y).normalized;
+        if (input != Vector2.zero) {
+            moveDir = input;
+            lastMoveDir = input;
+            isStopped = false; 
+        } else {
+            moveDir = Vector2.zero;
+            isStopped = true;
         }
     }
-}
+    
+    bool CanAttack() {
+        return Time.time - lastAttackTime >= attackCooldown;
+    }
 
-// 建议加上这个，方便你在编辑器里直接看到攻击范围
-void OnDrawGizmos() {
-    Gizmos.color = Color.red;
-    Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
-    Gizmos.DrawWireCube(hitBoxCenter, new Vector2(1.2f, 1.2f));
-}
+    void Attack() {
+        lastAttackTime = Time.time;
+        
+        Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
+
+        foreach (var hit in hitColliders) {
+            if (hit.gameObject != this.gameObject && !hit.CompareTag("Boundary")) {
+                CharacterLogic target = hit.GetComponent<CharacterLogic>();
+                if (target != null) {
+                    if (target.currentRole == Role.Player1) {
+                        GameManager.instance.EndGame("玩家二 (红) 获胜！");
+                    } else if (target.currentRole == Role.Player2) {
+                        GameManager.instance.EndGame("玩家一 (蓝) 获胜！");
+                    }
+                }
+                Destroy(hit.gameObject);
+                return; 
+            }
+        }
+    }
 
     IEnumerator BotRoutine() {
         while (true) {
-            float angle = Random.Range(0f, 360f);
-            moveDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
-            lastMoveDir = moveDir;
-            isStopped = false;
-
-            yield return new WaitForSeconds(Random.Range(1f, 3f));
-            isStopped = true;
-            yield return new WaitForSeconds(Random.Range(1f, 2f));
+            int behavior = Random.Range(0, 10);
+            
+            if (behavior != 0) {
+                float angle = Random.Range(0f, 360f);
+                moveDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
+                lastMoveDir = moveDir;
+                isStopped = false;
+                
+                float moveTime = Random.Range(0.5f, 2f);
+                yield return new WaitForSeconds(moveTime);
+            }
+            else {
+                isStopped = true;
+                moveDir = Vector2.zero;
+                
+                float stopTime = Random.Range(0.3f, 1.5f);
+                yield return new WaitForSeconds(stopTime);
+            }
         }
     }
 
-    void OnCollisionEnter2D(Collision2D collision) {
-    // 只有在没按键乱跑（比如Bot）或者刚撞上时才停
-    // 这样不会干扰玩家后续的按键操作
-    if (currentRole == Role.Bot) {
-        isStopped = true;
-        moveDir = Vector2.zero;
+    // 在编辑器里画出攻击范围，方便你调试
+    void OnDrawGizmosSelected() {
+        Gizmos.color = Color.yellow;
+        Vector2 center = (Vector2)transform.position + lastMoveDir * attackOffset;
+        Gizmos.DrawWireSphere(center, attackRadius);
     }
-}
+
+    void OnCollisionEnter2D(Collision2D collision) {
+        if (currentRole == Role.Bot) {
+            isStopped = true;
+            moveDir = Vector2.zero;
+        }
+    }
 }
