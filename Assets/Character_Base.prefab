@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 245275073936362050}
   - component: {fileID: 3565262212206504658}
   - component: {fileID: 5896812537794254247}
+  - component: {fileID: 533247761865982454}
   m_Layer: 0
   m_HasEditorInfo: 1
   m_Name: Character_Base
@@ -182,3 +183,26 @@ MonoBehaviour:
   rotationSpeed: 10
   attackRange: 1.5
   attackCooldown: 5
+--- !u!95 &533247761865982454
+Animator:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 255330424199105387}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 9f0ebb7623a524540b092d98a6862b36, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_UpdateFrequencyMode: 0
+  m_UpdateFrequency: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

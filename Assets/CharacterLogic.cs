@@ -9,244 +9,295 @@ public class CharacterLogic : MonoBehaviour
     [Header("移动设置")]
     public float moveSpeed = 4f;
     public float smoothSpeed = 10f;
-    public float rotationSpeed = 10f;  // 新增：旋转平滑速度
     private Rigidbody2D rb;
     private Vector2 moveDir;
     private Vector2 smoothMoveDir;
-    private Vector2 lastMoveDir = Vector2.right; 
+    private Vector2 lastMoveDir = Vector2.right;
     private bool isStopped = false;
-    private float targetRotation = 0f;  // 新增：目标旋转角度
-    private float currentRotation = 0f;  // 新增：当前旋转角度
-    private float rotationOffset = 30f;
 
     [Header("攻击设置")]
     public float attackRange = 1.5f;
     public float attackCooldown = 5f;
     private float lastAttackTime = 0f;
-    private SpriteRenderer spriteRenderer;  // 用于改变颜色
-    private Color originalColor;  // 原始颜色
-    
+    private SpriteRenderer spriteRenderer;
+    private Color originalColor;
+
+    // ===== 动画控制 =====
+    private Animator animator;
+    private bool isAttacking = false;
+    private bool isDead = false; // 新增：死亡标记
+    private float attackAnimLength = 0.5f;
+
     private Camera mainCamera;
     private float leftBound, rightBound, topBound, bottomBound;
 
-    void Awake() {
+    void Awake()
+    {
         rb = GetComponent<Rigidbody2D>();
         smoothMoveDir = Vector2.zero;
         mainCamera = Camera.main;
-        if (mainCamera != null) {
-            CalculateBounds();
-        }
-        
-        // 获取SpriteRenderer组件用于颜色闪烁
+        if (mainCamera != null) CalculateBounds();
+
         spriteRenderer = GetComponent<SpriteRenderer>();
+        animator = GetComponent<Animator>();
     }
 
-    void Start() {
+    void Start()
+    {
         if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
-        originalColor = spriteRenderer.color;
-        currentRotation = transform.eulerAngles.z;  // 初始化当前旋转角度
+        if (spriteRenderer != null) originalColor = spriteRenderer.color;
+
+        // 获取攻击动画时长
+        if (animator != null && animator.runtimeAnimatorController != null)
+        {
+            AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
+            foreach (var clip in clips)
+            {
+                if (clip.name.Contains("Attack"))
+                {
+                    attackAnimLength = clip.length;
+                    break;
+                }
+            }
+        }
     }
 
-    void Update() {
-        if (currentRole == Role.Player1) HandleP1();
-        else if (currentRole == Role.Player2) HandleP2();
-        
-        // 计算并更新旋转
-        UpdateRotation();
+    void Update()
+    {
+        // 死亡后不再更新任何动画与输入
+        if (isDead) return;
+
+        // 动画更新
+        if (animator != null)
+        {
+            float currentSpeed = rb.velocity.magnitude;
+            animator.SetFloat("Speed", currentSpeed);
+            animator.SetFloat("MoveX", lastMoveDir.x);
+            animator.SetFloat("MoveY", lastMoveDir.y);
+        }
+
+        // 玩家输入
+        if (!isAttacking)
+        {
+            if (currentRole == Role.Player1) HandleP1();
+            else if (currentRole == Role.Player2) HandleP2();
+        }
     }
 
-    void FixedUpdate() {
-        smoothMoveDir = Vector2.MoveTowards(smoothMoveDir, moveDir, smoothSpeed * Time.fixedDeltaTime);
-        
-        LimitToScreen();
-        //rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-        
-        if (isStopped && smoothMoveDir == Vector2.zero) {
+    void FixedUpdate()
+    {
+        if (isDead)
+        {
             rb.velocity = Vector2.zero;
-        } else {
+            return;
+        }
+
+        smoothMoveDir = Vector2.MoveTowards(smoothMoveDir, moveDir, smoothSpeed * Time.fixedDeltaTime);
+        LimitToScreen();
+
+        if (isStopped && smoothMoveDir == Vector2.zero)
+        {
+            rb.velocity = Vector2.zero;
+        }
+        else
+        {
             rb.velocity = smoothMoveDir * moveSpeed;
         }
     }
-    
-    void UpdateRotation() {
-        // 如果角色正在移动，则根据移动方向计算目标旋转角度
-        if (moveDir.magnitude > 0.1f) {
-            targetRotation = Mathf.Atan2(moveDir.y, moveDir.x) * Mathf.Rad2Deg + rotationOffset;
-        } else if (lastMoveDir.magnitude > 0.1f) {
-            // 如果没有移动但有最后移动方向，使用最后移动方向
-            targetRotation = Mathf.Atan2(lastMoveDir.y, lastMoveDir.x) * Mathf.Rad2Deg + rotationOffset;
-        }
-        
-        // 平滑旋转
-        currentRotation = Mathf.LerpAngle(currentRotation, targetRotation, rotationSpeed * Time.deltaTime);
-        
-        // 应用旋转
-        transform.rotation = Quaternion.Euler(0f, 0f, currentRotation);
-    }
-    
-    private void CalculateBounds() {
+
+    private void CalculateBounds()
+    {
         float size = mainCamera.orthographicSize;
         float aspect = mainCamera.aspect;
-        
         rightBound = size * aspect - 0.5f;
         leftBound = -rightBound;
         topBound = size - 0.5f;
         bottomBound = -topBound;
     }
-    
-    private void LimitToScreen() {
+
+    private void LimitToScreen()
+    {
         if (mainCamera == null) return;
-        
         Vector2 pos = rb.position;
-        
-        if (pos.x < leftBound) {
-            pos.x = leftBound;
-            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
-        } else if (pos.x > rightBound) {
-            pos.x = rightBound;
-            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
-        }
-        
-        if (pos.y < bottomBound) {
-            pos.y = bottomBound;
-            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
-        } else if (pos.y > topBound) {
-            pos.y = topBound;
-            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
-        }
-        
+
+        if (pos.x < leftBound) { pos.x = leftBound; if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; } }
+        else if (pos.x > rightBound) { pos.x = rightBound; if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; } }
+        if (pos.y < bottomBound) { pos.y = bottomBound; if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; } }
+        else if (pos.y > topBound) { pos.y = topBound; if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; } }
+
         if (pos != rb.position) rb.MovePosition(pos);
     }
 
-    void HandleP1() {
-        // 修改：使用独立的按键检测，允许同时按下
-        float x = 0;
-        float y = 0;
-        
-        // 垂直方向
+    void HandleP1()
+    {
+        float x = 0, y = 0;
         if (Input.GetKey(KeyCode.W)) y += 1;
-        if (Input.GetKey(KeyCode.S)) y -= 1;  // 移除else，允许同时检测
-        
-        // 水平方向
+        if (Input.GetKey(KeyCode.S)) y -= 1;
         if (Input.GetKey(KeyCode.A)) x -= 1;
-        if (Input.GetKey(KeyCode.D)) x += 1;  // 移除else，允许同时检测
-        
-        // 标准化输入向量
-        Vector2 rawInput = new Vector2(x, y);
-        
-        // 如果有输入，进行标准化
-        if (rawInput.magnitude > 0) {
-            rawInput.Normalize();
-        }
-        
-        // 调用ProcessInput
+        if (Input.GetKey(KeyCode.D)) x += 1;
+        Vector2 rawInput = new Vector2(x, y).normalized;
         ProcessInput(rawInput.x, rawInput.y);
-        
+
         if (Input.GetKeyDown(KeyCode.F) && CanAttack()) Attack();
     }
 
-    void HandleP2() {
-        float x = 0;
-        float y = 0;
-        
-        // 垂直方向
+    void HandleP2()
+    {
+        float x = 0, y = 0;
         if (Input.GetKey(KeyCode.UpArrow)) y += 1;
         if (Input.GetKey(KeyCode.DownArrow)) y -= 1;
-        
-        // 水平方向
         if (Input.GetKey(KeyCode.LeftArrow)) x -= 1;
         if (Input.GetKey(KeyCode.RightArrow)) x += 1;
-        
-        Vector2 rawInput = new Vector2(x, y);
-        if (rawInput.magnitude > 0) {
-            rawInput.Normalize();
-        }
-        
+        Vector2 rawInput = new Vector2(x, y).normalized;
         ProcessInput(rawInput.x, rawInput.y);
-        
+
         if ((Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Alpha0)) && CanAttack()) Attack();
     }
 
-    void ProcessInput(float x, float y) {
+    void ProcessInput(float x, float y)
+    {
         Vector2 input = new Vector2(x, y);
-        if (input.magnitude > 0.1f) {  // 使用小阈值避免抖动
+        if (input.magnitude > 0.1f)
+        {
             input.Normalize();
             moveDir = input;
             lastMoveDir = input;
-            isStopped = false; 
-        } else {
+            isStopped = false;
+        }
+        else
+        {
             moveDir = Vector2.zero;
             isStopped = true;
         }
     }
-    
-    bool CanAttack() {
-        return Time.time - lastAttackTime >= attackCooldown;
+
+    bool CanAttack()
+    {
+        return Time.time - lastAttackTime >= attackCooldown && !isAttacking && !isDead;
     }
 
-    void Attack() {
-        lastAttackTime = Time.time;
-        
-        // 添加攻击视觉反馈 - 颜色闪烁
-        if (spriteRenderer != null) {
-            StartCoroutine(AttackFlash());
-        }
-        
-        Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
-        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
+void Attack()
+{
+    lastAttackTime = Time.time;
 
-        foreach (var hit in hitColliders) {
-            if (hit.gameObject != this.gameObject && !hit.CompareTag("Boundary")) {
-                CharacterLogic target = hit.GetComponent<CharacterLogic>();
-                if (target != null) {
-                    if (target.currentRole == Role.Player1) {
-                        GameManager.instance.EndGame("玩家二 (红) 获胜！");
-                    } else if (target.currentRole == Role.Player2) {
-                        GameManager.instance.EndGame("玩家一 (蓝) 获胜！");
-                    }
-                }
-                Destroy(hit.gameObject);
-                return; 
+    if (animator != null)
+        animator.SetTrigger("Attack");
+
+    isAttacking = true;
+    moveDir = Vector2.zero;
+    isStopped = true;
+    StartCoroutine(WaitForAttackEnd());
+
+    if (spriteRenderer != null)
+        StartCoroutine(AttackFlash());
+
+    Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
+    Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
+
+    foreach (var hit in hitColliders)
+    {
+        if (hit.gameObject != gameObject && !hit.CompareTag("Boundary"))
+        {
+            CharacterLogic target = hit.GetComponent<CharacterLogic>();
+            if (target != null)
+            {
+                target.Die(); // 触发死亡动画
+
+                if (target.currentRole == Role.Player1)
+                    GameManager.instance.EndGame("玩家二（红）获胜！");
+                else if (target.currentRole == Role.Player2)
+                    GameManager.instance.EndGame("玩家一（蓝）获胜！");
             }
+
+            // 这里先不销毁！
+            return;
         }
     }
-    
-    // 攻击闪烁协程
-    IEnumerator AttackFlash() {
-        if (spriteRenderer != null) {
+}
+
+// 死亡：播放动画 → 等动画结束 → 销毁
+public void Die()
+{
+    if (isDead) return;
+    isDead = true;
+
+    if (animator != null)
+    {
+        animator.SetTrigger("Die");
+        animator.SetFloat("Speed", 0);
+    }
+
+    rb.velocity = Vector2.zero;
+    moveDir = Vector2.zero;
+    isStopped = true;
+    isAttacking = false;
+    StopAllCoroutines();
+
+    // 等待死亡动画播完再销毁
+    StartCoroutine(DieAndDestroyAfterAnimation());
+}
+
+IEnumerator DieAndDestroyAfterAnimation()
+{
+    // 等待1秒（和你的死亡动画时长一致）
+    yield return new WaitForSeconds(1f);
+    Destroy(gameObject);
+}
+
+    IEnumerator WaitForAttackEnd()
+    {
+        float waitTime = attackAnimLength > 0 ? attackAnimLength : 0.5f;
+        yield return new WaitForSeconds(waitTime);
+        isAttacking = false;
+    }
+
+    IEnumerator AttackFlash()
+    {
+        if (spriteRenderer != null)
+        {
             spriteRenderer.color = Color.yellow;
-            // 等待一小段时间
             yield return new WaitForSeconds(0.1f);
-            // 恢复原始颜色
             spriteRenderer.color = originalColor;
         }
     }
 
-    IEnumerator BotRoutine() {
-        while (true) {
-            int behavior = Random.Range(0, 10);
-            
-            if (behavior != 0) {
-                float angle = Random.Range(0f, 360f);
-                moveDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
-                lastMoveDir = moveDir;
-                isStopped = false;
-                
-                float moveTime = Random.Range(0.5f, 2f);
-                yield return new WaitForSeconds(moveTime);
+    IEnumerator BotRoutine()
+    {
+        while (true)
+        {
+            if (isDead) yield break;
+
+            if (!isAttacking)
+            {
+                int behavior = Random.Range(0, 10);
+                if (behavior != 0)
+                {
+                    float angle = Random.Range(0f, 360f);
+                    moveDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
+                    lastMoveDir = moveDir;
+                    isStopped = false;
+                    float moveTime = Random.Range(0.5f, 2f);
+                    yield return new WaitForSeconds(moveTime);
+                }
+                else
+                {
+                    isStopped = true;
+                    moveDir = Vector2.zero;
+                    float stopTime = Random.Range(0.3f, 1.5f);
+                    yield return new WaitForSeconds(stopTime);
+                }
             }
-            else {
-                isStopped = true;
-                moveDir = Vector2.zero;
-                
-                float stopTime = Random.Range(0.3f, 1.5f);
-                yield return new WaitForSeconds(stopTime);
+            else
+            {
+                yield return new WaitForSeconds(0.1f);
             }
         }
     }
 
-    void OnCollisionEnter2D(Collision2D collision) {
-        if (currentRole == Role.Bot) {
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (currentRole == Role.Bot && !isAttacking && !isDead)
+        {
             isStopped = true;
             moveDir = Vector2.zero;
         }
