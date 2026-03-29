@@ -9,16 +9,22 @@ public class CharacterLogic : MonoBehaviour
     [Header("移动设置")]
     public float moveSpeed = 4f;
     public float smoothSpeed = 10f;
+    public float rotationSpeed = 10f;  // 新增：旋转平滑速度
     private Rigidbody2D rb;
     private Vector2 moveDir;
     private Vector2 smoothMoveDir;
     private Vector2 lastMoveDir = Vector2.right; 
     private bool isStopped = false;
+    private float targetRotation = 0f;  // 新增：目标旋转角度
+    private float currentRotation = 0f;  // 新增：当前旋转角度
+    private float rotationOffset = 30f;
 
     [Header("攻击设置")]
     public float attackRange = 1.5f;
     public float attackCooldown = 5f;
     private float lastAttackTime = 0f;
+    private SpriteRenderer spriteRenderer;  // 用于改变颜色
+    private Color originalColor;  // 原始颜色
     
     private Camera mainCamera;
     private float leftBound, rightBound, topBound, bottomBound;
@@ -30,28 +36,52 @@ public class CharacterLogic : MonoBehaviour
         if (mainCamera != null) {
             CalculateBounds();
         }
+        
+        // 获取SpriteRenderer组件用于颜色闪烁
+        spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
     void Start() {
         if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
+        originalColor = spriteRenderer.color;
+        currentRotation = transform.eulerAngles.z;  // 初始化当前旋转角度
     }
 
     void Update() {
         if (currentRole == Role.Player1) HandleP1();
         else if (currentRole == Role.Player2) HandleP2();
+        
+        // 计算并更新旋转
+        UpdateRotation();
     }
 
     void FixedUpdate() {
         smoothMoveDir = Vector2.MoveTowards(smoothMoveDir, moveDir, smoothSpeed * Time.fixedDeltaTime);
         
         LimitToScreen();
-        rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        //rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         
         if (isStopped && smoothMoveDir == Vector2.zero) {
             rb.velocity = Vector2.zero;
         } else {
             rb.velocity = smoothMoveDir * moveSpeed;
         }
+    }
+    
+    void UpdateRotation() {
+        // 如果角色正在移动，则根据移动方向计算目标旋转角度
+        if (moveDir.magnitude > 0.1f) {
+            targetRotation = Mathf.Atan2(moveDir.y, moveDir.x) * Mathf.Rad2Deg + rotationOffset;
+        } else if (lastMoveDir.magnitude > 0.1f) {
+            // 如果没有移动但有最后移动方向，使用最后移动方向
+            targetRotation = Mathf.Atan2(lastMoveDir.y, lastMoveDir.x) * Mathf.Rad2Deg + rotationOffset;
+        }
+        
+        // 平滑旋转
+        currentRotation = Mathf.LerpAngle(currentRotation, targetRotation, rotationSpeed * Time.deltaTime);
+        
+        // 应用旋转
+        transform.rotation = Quaternion.Euler(0f, 0f, currentRotation);
     }
     
     private void CalculateBounds() {
@@ -157,6 +187,11 @@ public class CharacterLogic : MonoBehaviour
     void Attack() {
         lastAttackTime = Time.time;
         
+        // 添加攻击视觉反馈 - 颜色闪烁
+        if (spriteRenderer != null) {
+            StartCoroutine(AttackFlash());
+        }
+        
         Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
 
@@ -173,6 +208,17 @@ public class CharacterLogic : MonoBehaviour
                 Destroy(hit.gameObject);
                 return; 
             }
+        }
+    }
+    
+    // 攻击闪烁协程
+    IEnumerator AttackFlash() {
+        if (spriteRenderer != null) {
+            spriteRenderer.color = Color.yellow;
+            // 等待一小段时间
+            yield return new WaitForSeconds(0.1f);
+            // 恢复原始颜色
+            spriteRenderer.color = originalColor;
         }
     }
 

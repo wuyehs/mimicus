@@ -9,7 +9,7 @@ public class GameManager : MonoBehaviour
     public static GameManager instance;
     public Camera mainCamera;   
     [Header("摄像机设置")]
-    [SerializeField] private float cameraSize = 50f;  // 正交摄像机大小
+    [SerializeField] private float cameraSize = 5f;  // 正交摄像机大小
     [SerializeField] private Color backgroundColor = Color.black;
 
     [Header("游戏设置")]
@@ -88,7 +88,7 @@ public class GameManager : MonoBehaviour
             // 1. 显示 UI 物体
             winText.gameObject.SetActive(true);
             // 2. 修改文字内容
-            winText.text = winnerMessage + "\n按 R 键重新开始";
+            winText.text = winnerMessage + "\npress R key to restart";
         }
 
         // 3. 冻结游戏时间
