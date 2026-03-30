@@ -205,10 +205,17 @@ public class CharacterLogic : MonoBehaviour
     {
         float size = mainCamera.orthographicSize;
         float aspect = mainCamera.aspect;
-        rightBound = size * aspect - 0.5f;
-        leftBound = -rightBound;
-        topBound = size - 0.5f;
-        bottomBound = -topBound;
+        // --- 修改开始 ---
+    float horizontalOffset = 2.5f; // 左右边界缩回的距离（原为 0.5f）
+    float topOffset = 4.5f;        // 上边界缩回的距离（缩得多一些）
+    float bottomOffset =-0.5f;     // 下边界保持原样或微调
+
+    rightBound = size * aspect - horizontalOffset;
+    leftBound = -rightBound;
+    
+    topBound = size - topOffset;
+    bottomBound = -(size - bottomOffset); 
+    // --- 修改结束 ---
     }
 
     private void LimitToScreen()

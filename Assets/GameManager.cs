@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour
     public Camera mainCamera;   
     
     [Header("调试设置")]
-    public bool debugMode = true;  // 新增：调试模式开关，与CharacterLogic保持一致
+    public bool debugMode = true;
     
     [Header("摄像机设置")]
     [SerializeField] private float cameraSize = 5f;
@@ -28,7 +28,6 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         instance = this;
-    
         mainCamera = Camera.main;
         mainCamera.orthographic = true;
         mainCamera.orthographicSize = cameraSize;
@@ -39,51 +38,71 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         Time.timeScale = 1f;
-        
-        if (winText != null)
-        {
-            winText.gameObject.SetActive(false);
-        }
-
+        if (winText != null) winText.gameObject.SetActive(false);
         SpawnCharacters();
     }
 
     void SpawnCharacters()
     {
         List<CharacterLogic> allChars = new List<CharacterLogic>();
+        float minDistance = 1.5f; 
+        int maxAttempts = 10;     
+
         for (int i = 0; i < totalCharacters; i++)
         {
-            Vector2 pos = new Vector2(Random.Range(-8f, 8f), Random.Range(-4.5f, 4.5f));
-            GameObject go = Instantiate(charPrefab, pos, Quaternion.identity);
+            Vector2 spawnPos = Vector2.zero;
+            bool isPosValid = false;
+            int attempts = 0;
+
+            // 根据你的需求缩进的边界范围
+            float xRange = 6.0f; 
+            float yMax = 4.0f;   
+            float yMin = -4.0f;  
+
+            while (!isPosValid && attempts < maxAttempts)
+            {
+                attempts++;
+                spawnPos = new Vector2(Random.Range(-xRange, xRange), Random.Range(yMin, yMax));
+
+                isPosValid = true;
+                foreach (var existingChar in allChars)
+                {
+                    if (existingChar != null && Vector2.Distance(spawnPos, (Vector2)existingChar.transform.position) < minDistance)
+                    {
+                        isPosValid = false;
+                        break;
+                    }
+                }
+            }
+
+            GameObject go = Instantiate(charPrefab, spawnPos, Quaternion.identity);
             CharacterLogic logic = go.GetComponent<CharacterLogic>();
-            
-            // 设置调试模式
             if (logic != null)
             {
-                logic.debugMode = debugMode;  // 传递调试模式设置
+                logic.debugMode = debugMode; 
+                allChars.Add(logic);
             }
-            
-            allChars.Add(logic);
         }
 
-        // 随机分配玩家角色
-        int p1 = Random.Range(0, totalCharacters);
-        int p2 = Random.Range(0, totalCharacters);
-        while (p1 == p2) p2 = Random.Range(0, totalCharacters);
-
-        allChars[p1].currentRole = CharacterLogic.Role.Player1;
-        allChars[p2].currentRole = CharacterLogic.Role.Player2;
-        
-        // 在调试模式下才染色
-        if (debugMode)
+        // 分配玩家角色
+        if (allChars.Count >= 2)
         {
-            SpriteRenderer sr1 = allChars[p1].GetComponent<SpriteRenderer>();
-            SpriteRenderer sr2 = allChars[p2].GetComponent<SpriteRenderer>();
+            int p1 = Random.Range(0, allChars.Count);
+            int p2 = Random.Range(0, allChars.Count);
+            while (p1 == p2) p2 = Random.Range(0, allChars.Count);
+
+            allChars[p1].currentRole = CharacterLogic.Role.Player1;
+            allChars[p2].currentRole = CharacterLogic.Role.Player2;
             
-            if (sr1 != null) sr1.color = Color.blue;
-            if (sr2 != null) sr2.color = Color.red;
+            if (debugMode)
+            {
+                if (allChars[p1].GetComponent<SpriteRenderer>() != null) 
+                    allChars[p1].GetComponent<SpriteRenderer>().color = Color.blue;
+                if (allChars[p2].GetComponent<SpriteRenderer>() != null) 
+                    allChars[p2].GetComponent<SpriteRenderer>().color = Color.red;
+            }
         }
-    }
+    } // 这里才是 SpawnCharacters 的正确结尾
 
     void Update()
     {
