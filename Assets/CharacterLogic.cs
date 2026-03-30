@@ -6,6 +6,10 @@ public class CharacterLogic : MonoBehaviour
     public enum Role { Bot, Player1, Player2 }
     public Role currentRole = Role.Bot;
 
+    public bool debugMode = false;
+    [Header("外观设置")]
+    public float characterScale = 2f;
+    
     [Header("移动设置")]
     public float moveSpeed = 4f;
     public float smoothSpeed = 10f;
@@ -20,14 +24,19 @@ public class CharacterLogic : MonoBehaviour
     public float attackCooldown = 5f;
     private float lastAttackTime = 0f;
     private SpriteRenderer spriteRenderer;
-    private Color originalColor;
+    
+    // 新增：默认颜色（非调试模式使用）
+    private static readonly Color defaultColor = Color.white;
 
     // ===== 动画控制 =====
     private Animator animator;
     private bool isAttacking = false;
-    private bool isDead = false; // 新增：死亡标记
+    private bool isDead = false;
     private float attackAnimLength = 0.5f;
 
+    // 新增：碰撞盒引用
+    private Collider2D characterCollider;
+    
     private Camera mainCamera;
     private float leftBound, rightBound, topBound, bottomBound;
 
@@ -40,12 +49,19 @@ public class CharacterLogic : MonoBehaviour
 
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
+        characterCollider = GetComponent<Collider2D>();
     }
 
     void Start()
     {
+        // 应用角色缩放
+        ApplyCharacterScale();
+        debugMode = GameManager.instance.debugMode;
+        
         if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
-        if (spriteRenderer != null) originalColor = spriteRenderer.color;
+        
+        // 根据调试模式设置初始颜色
+        InitializeCharacterColor();
 
         // 获取攻击动画时长
         if (animator != null && animator.runtimeAnimatorController != null)
@@ -61,27 +77,107 @@ public class CharacterLogic : MonoBehaviour
             }
         }
     }
+    
+    // 修改：初始化角色颜色
+    private void InitializeCharacterColor()
+    {
+        if (spriteRenderer != null)
+        {
+            if (debugMode)
+            {
+                // 调试模式：玩家有颜色区分
+                if (currentRole == Role.Player1)
+                {
+                    spriteRenderer.color = Color.blue;
+                }
+                else if (currentRole == Role.Player2)
+                {
+                    spriteRenderer.color = Color.red;
+                }
+                else if (currentRole == Role.Bot)
+                {
+                    spriteRenderer.color = Color.gray;  // Bot为灰色
+                }
+            }
+            else
+            {
+                // 非调试模式：所有角色颜色相同
+                spriteRenderer.color = defaultColor;
+            }
+        }
+    }
+    
+    private void ApplyCharacterScale()
+    {
+        transform.localScale = new Vector3(characterScale, characterScale, 1f);
+        AdjustColliderSize();
+    }
+    
+    private void AdjustColliderSize()
+    {
+        if (characterCollider != null)
+        {
+            float colliderScale = 1f / characterScale;
+            
+            if (characterCollider is BoxCollider2D boxCollider)
+            {
+                if (boxCollider.size.x > 0.1f && boxCollider.size.y > 0.1f)
+                {
+                    boxCollider.size *= colliderScale;
+                }
+            }
+            else if (characterCollider is CircleCollider2D circleCollider)
+            {
+                if (circleCollider.radius > 0.1f)
+                {
+                    circleCollider.radius *= colliderScale;
+                }
+            }
+        }
+    }
 
     void Update()
     {
-        // 死亡后不再更新任何动画与输入
         if (isDead) return;
 
-        // 动画更新
         if (animator != null)
         {
             float currentSpeed = rb.velocity.magnitude;
             animator.SetFloat("Speed", currentSpeed);
-            animator.SetFloat("MoveX", lastMoveDir.x);
-            animator.SetFloat("MoveY", lastMoveDir.y);
+            
+            Vector2 animDir = GetAnimationDirection(lastMoveDir);
+            animator.SetFloat("MoveX", animDir.x);
+            animator.SetFloat("MoveY", animDir.y);
         }
 
-        // 玩家输入
         if (!isAttacking)
         {
             if (currentRole == Role.Player1) HandleP1();
             else if (currentRole == Role.Player2) HandleP2();
         }
+    }
+    
+    // 修改：获取动画方向
+    private Vector2 GetAnimationDirection(Vector2 inputDir)
+    {
+        if (inputDir.magnitude < 0.1f) return Vector2.right;
+        
+        // 判断是否为纯下方向移动
+        float horizontalThreshold = 0.2f;
+        
+        if (inputDir.y < 0)
+        {
+            if (Mathf.Abs(inputDir.x) < horizontalThreshold)
+            {
+                return new Vector2(0, -1);
+            }
+            else
+            {
+                return new Vector2(Mathf.Sign(inputDir.x), 0);
+            }
+        }
+        
+        return inputDir.normalized;
     }
 
     void FixedUpdate()
@@ -176,73 +272,68 @@ public class CharacterLogic : MonoBehaviour
         return Time.time - lastAttackTime >= attackCooldown && !isAttacking && !isDead;
     }
 
-void Attack()
-{
-    lastAttackTime = Time.time;
-
-    if (animator != null)
-        animator.SetTrigger("Attack");
-
-    isAttacking = true;
-    moveDir = Vector2.zero;
-    isStopped = true;
-    StartCoroutine(WaitForAttackEnd());
-
-    if (spriteRenderer != null)
-        StartCoroutine(AttackFlash());
-
-    Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
-    Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
-
-    foreach (var hit in hitColliders)
+    void Attack()
     {
-        if (hit.gameObject != gameObject && !hit.CompareTag("Boundary"))
+        lastAttackTime = Time.time;
+
+        if (animator != null)
+            animator.SetTrigger("Attack");
+
+        isAttacking = true;
+        moveDir = Vector2.zero;
+        isStopped = true;
+        StartCoroutine(WaitForAttackEnd());
+
+        if (spriteRenderer != null)
+            StartCoroutine(AttackFlash());
+
+        Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
+
+        foreach (var hit in hitColliders)
         {
-            CharacterLogic target = hit.GetComponent<CharacterLogic>();
-            if (target != null)
+            if (hit.gameObject != gameObject && !hit.CompareTag("Boundary"))
             {
-                target.Die(); // 触发死亡动画
+                CharacterLogic target = hit.GetComponent<CharacterLogic>();
+                if (target != null)
+                {
+                    target.Die();
 
-                if (target.currentRole == Role.Player1)
-                    GameManager.instance.EndGame("玩家二（红）获胜！");
-                else if (target.currentRole == Role.Player2)
-                    GameManager.instance.EndGame("玩家一（蓝）获胜！");
+                    if (target.currentRole == Role.Player1)
+                        GameManager.instance.EndGame("玩家二（红）获胜！");
+                    else if (target.currentRole == Role.Player2)
+                        GameManager.instance.EndGame("玩家一（蓝）获胜！");
+                }
+                return;
             }
-
-            // 这里先不销毁！
-            return;
         }
     }
-}
 
-// 死亡：播放动画 → 等动画结束 → 销毁
-public void Die()
-{
-    if (isDead) return;
-    isDead = true;
-
-    if (animator != null)
+    public void Die()
     {
-        animator.SetTrigger("Die");
-        animator.SetFloat("Speed", 0);
+        if (isDead) return;
+        isDead = true;
+
+        if (animator != null)
+        {
+            animator.SetTrigger("Die");
+            animator.SetFloat("Speed", 0);
+        }
+
+        rb.velocity = Vector2.zero;
+        moveDir = Vector2.zero;
+        isStopped = true;
+        isAttacking = false;
+        StopAllCoroutines();
+
+        StartCoroutine(DieAndDestroyAfterAnimation());
     }
 
-    rb.velocity = Vector2.zero;
-    moveDir = Vector2.zero;
-    isStopped = true;
-    isAttacking = false;
-    StopAllCoroutines();
-
-    // 等待死亡动画播完再销毁
-    StartCoroutine(DieAndDestroyAfterAnimation());
-}
-
-IEnumerator DieAndDestroyAfterAnimation()
-{
-    // 等待1秒（和你的死亡动画时长一致）
-    yield return new WaitForSeconds(1f);
-    Destroy(gameObject);
-}
+    IEnumerator DieAndDestroyAfterAnimation()
+    {
+        yield return new WaitForSeconds(1f);
+        Destroy(gameObject);
+    }
 
     IEnumerator WaitForAttackEnd()
     {
@@ -255,9 +346,14 @@ IEnumerator DieAndDestroyAfterAnimation()
     {
         if (spriteRenderer != null)
         {
-            spriteRenderer.color = Color.yellow;
+            // 在非调试模式下，闪光效果可能不太明显
+            Color flashColor = debugMode ? Color.yellow : new Color(1f, 1f, 0.8f, 1f);
+            spriteRenderer.color = flashColor;
             yield return new WaitForSeconds(0.1f);
-            spriteRenderer.color = originalColor;
+            spriteRenderer.color = debugMode ? 
+                (currentRole == Role.Player1 ? Color.blue : 
+                 currentRole == Role.Player2 ? Color.red : 
+                 currentRole == Role.Bot ? Color.gray : defaultColor) : defaultColor;
         }
     }
 
