@@ -7,11 +7,14 @@ public class CharacterLogic : MonoBehaviour
     public Role currentRole = Role.Bot;
 
     public bool debugMode = false;
-    [Header("外观设置")]
-    public float characterScale = 2f;
+
+    public enum WeaponType { Melee, Gun }
+    public WeaponType currentWeapon = WeaponType.Melee;   // 当前武器
+    public Vector2 shootOffset = new Vector2(0.8f, 0f);  // 枪口偏移
+    public float shootRange = 10f;       
     
     [Header("移动设置")]
-    public float moveSpeed = 4f;
+    public float moveSpeed = 2f;
     public float smoothSpeed = 10f;
     private Rigidbody2D rb;
     private Vector2 moveDir;
@@ -44,9 +47,7 @@ public class CharacterLogic : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         smoothMoveDir = Vector2.zero;
-        mainCamera = Camera.main;
-        if (mainCamera != null) CalculateBounds();
-
+        
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         characterCollider = GetComponent<Collider2D>();
@@ -54,14 +55,12 @@ public class CharacterLogic : MonoBehaviour
 
     void Start()
     {
-        // 应用角色缩放
-        ApplyCharacterScale();
+        mainCamera = Camera.main;
+        if (mainCamera != null) CalculateBounds();
+
         debugMode = GameManager.instance.debugMode;
         
         if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
-        
-        // 根据调试模式设置初始颜色
-        InitializeCharacterColor();
 
         // 获取攻击动画时长
         if (animator != null && animator.runtimeAnimatorController != null)
@@ -77,68 +76,11 @@ public class CharacterLogic : MonoBehaviour
             }
         }
     }
-    
-    // 修改：初始化角色颜色
-    private void InitializeCharacterColor()
-    {
-        if (spriteRenderer != null)
-        {
-            if (debugMode)
-            {
-                // 调试模式：玩家有颜色区分
-                if (currentRole == Role.Player1)
-                {
-                    spriteRenderer.color = Color.blue;
-                }
-                else if (currentRole == Role.Player2)
-                {
-                    spriteRenderer.color = Color.red;
-                }
-                else if (currentRole == Role.Bot)
-                {
-                    spriteRenderer.color = Color.gray;  // Bot为灰色
-                }
-            }
-            else
-            {
-                // 非调试模式：所有角色颜色相同
-                spriteRenderer.color = defaultColor;
-            }
-        }
-    }
-    
-    private void ApplyCharacterScale()
-    {
-        transform.localScale = new Vector3(characterScale, characterScale, 1f);
-        AdjustColliderSize();
-    }
-    
-    private void AdjustColliderSize()
-    {
-        if (characterCollider != null)
-        {
-            float colliderScale = 1f / characterScale;
-            
-            if (characterCollider is BoxCollider2D boxCollider)
-            {
-                if (boxCollider.size.x > 0.1f && boxCollider.size.y > 0.1f)
-                {
-                    boxCollider.size *= colliderScale;
-                }
-            }
-            else if (characterCollider is CircleCollider2D circleCollider)
-            {
-                if (circleCollider.radius > 0.1f)
-                {
-                    circleCollider.radius *= colliderScale;
-                }
-            }
-        }
-    }
 
     void Update()
     {
         if (isDead) return;
+        
 
         if (animator != null)
         {
@@ -157,7 +99,12 @@ public class CharacterLogic : MonoBehaviour
         }
     }
     
+    public void PickUpGun()
+    {
+        currentWeapon = WeaponType.Gun;
+    }
     // 修改：获取动画方向
+
     private Vector2 GetAnimationDirection(Vector2 inputDir)
     {
         if (inputDir.magnitude < 0.1f) return Vector2.right;
@@ -205,10 +152,9 @@ public class CharacterLogic : MonoBehaviour
     {
         float size = mainCamera.orthographicSize;
         float aspect = mainCamera.aspect;
-        // --- 修改开始 ---
-    float horizontalOffset = 2.5f; // 左右边界缩回的距离（原为 0.5f）
-    float topOffset = 4.5f;        // 上边界缩回的距离（缩得多一些）
-    float bottomOffset =-0.5f;     // 下边界保持原样或微调
+    float horizontalOffset = 1f; // 左右边界缩回的距离（原为 0.5f）
+    float topOffset = 2.5f;        // 上边界缩回的距离（缩得多一些）
+    float bottomOffset =-0.3f;     // 下边界保持原样或微调
 
     rightBound = size * aspect - horizontalOffset;
     leftBound = -rightBound;
@@ -218,18 +164,26 @@ public class CharacterLogic : MonoBehaviour
     // --- 修改结束 ---
     }
 
-    private void LimitToScreen()
+   private void LimitToScreen()
+{
+    if (mainCamera == null) return;
+    Vector2 pos = rb.position;
+    Vector2 vel = rb.velocity; // 获取速度
+    bool changed = false;
+
+    if (pos.x < leftBound) { pos.x = leftBound; vel.x = 0; changed = true; }
+    else if (pos.x > rightBound) { pos.x = rightBound; vel.x = 0; changed = true; }
+    
+    if (pos.y < bottomBound) { pos.y = bottomBound; vel.y = 0; changed = true; }
+    else if (pos.y > topBound) { pos.y = topBound; vel.y = 0; changed = true; }
+
+    if (changed)
     {
-        if (mainCamera == null) return;
-        Vector2 pos = rb.position;
-
-        if (pos.x < leftBound) { pos.x = leftBound; if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; } }
-        else if (pos.x > rightBound) { pos.x = rightBound; if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; } }
-        if (pos.y < bottomBound) { pos.y = bottomBound; if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; } }
-        else if (pos.y > topBound) { pos.y = topBound; if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; } }
-
-        if (pos != rb.position) rb.MovePosition(pos);
+        rb.position = pos; // 修正坐标
+        rb.velocity = vel; // 关键：撞墙瞬间必须杀掉速度，防止抖动
+        if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
     }
+}
 
     void HandleP1()
     {
@@ -281,40 +235,84 @@ public class CharacterLogic : MonoBehaviour
 
     void Attack()
     {
-        lastAttackTime = Time.time;
+        // 冷却与攻击状态检查（仅近战有冷却，射击有自己的冷却）
+        if (currentWeapon == WeaponType.Melee && !CanAttack()) return;
 
-        if (animator != null)
-            animator.SetTrigger("Attack");
-
-        isAttacking = true;
-        moveDir = Vector2.zero;
-        isStopped = true;
-        StartCoroutine(WaitForAttackEnd());
-
-        if (spriteRenderer != null)
-            StartCoroutine(AttackFlash());
-
-        Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
-        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
-
-        foreach (var hit in hitColliders)
+        if (currentWeapon == WeaponType.Gun)
         {
-            if (hit.gameObject != gameObject && !hit.CompareTag("Boundary"))
-            {
-                CharacterLogic target = hit.GetComponent<CharacterLogic>();
-                if (target != null)
-                {
-                    target.Die();
+            Vector2 shootDir = lastMoveDir.normalized;
+            if (shootDir == Vector2.zero) shootDir = Vector2.right;
 
-                    if (target.currentRole == Role.Player1)
-                        GameManager.instance.EndGame("玩家二（红）获胜！");
-                    else if (target.currentRole == Role.Player2)
-                        GameManager.instance.EndGame("玩家一（蓝）获胜！");
-                }
-                return;
+            Vector2 origin = (Vector2)transform.position + shootOffset * shootDir;
+            RaycastHit2D[] hits = Physics2D.RaycastAll(origin, shootDir, shootRange);
+            Debug.DrawRay(origin, shootDir * shootRange, Color.red, 0.2f);
+
+            // 将射线命中转换为碰撞体数组
+            Collider2D[] hitColliders = new Collider2D[hits.Length];
+            for (int i = 0; i < hits.Length; i++) hitColliders[i] = hits[i].collider;
+
+            // 统一处理命中目标
+            ProcessHitTargets(hitColliders);
+            currentWeapon = WeaponType.Melee;
+        }
+        else // 近战攻击
+        {
+            lastAttackTime = Time.time;
+
+            if (animator != null)
+                animator.SetTrigger("Attack");
+
+            isAttacking = true;
+            moveDir = Vector2.zero;
+            isStopped = true;
+            StartCoroutine(WaitForAttackEnd());
+
+            if (spriteRenderer != null)
+                StartCoroutine(AttackFlash());
+
+            Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
+            Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
+
+            // 统一处理命中目标
+            ProcessHitTargets(hitColliders);
+        }
+    }
+
+// ========== 公共目标处理 ==========
+private void ProcessHitTargets(Collider2D[] hits)
+{
+    CharacterLogic bestTarget = null;
+    float nearestDistance = float.MaxValue;
+    Vector2 attackerPos = transform.position;
+
+    foreach (var hit in hits)
+    {
+        if (hit == null) continue;
+        if (hit.gameObject == gameObject) continue;
+        if (hit.CompareTag("Boundary")) continue;
+
+        CharacterLogic target = hit.GetComponent<CharacterLogic>();
+        if (target != null && !target.isDead)
+        {
+            float distance = Vector2.Distance(attackerPos, target.transform.position);
+            if (distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                bestTarget = target;
             }
         }
     }
+
+    if (bestTarget != null)
+    {
+        bestTarget.Die();
+
+        if (bestTarget.currentRole == Role.Player1)
+            GameManager.instance.EndGame("玩家二（红）获胜！");
+        else if (bestTarget.currentRole == Role.Player2)
+            GameManager.instance.EndGame("玩家一（蓝）获胜！");
+    }
+}
 
     public void Die()
     {
