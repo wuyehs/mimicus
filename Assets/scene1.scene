@@ -544,7 +544,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+<<<<<<< HEAD
+    - target: {fileID: 2885390831960653118, guid: 2dace722a8ec4c8448f68436709cc5d7, type: 3}
+=======
     - target: {fileID: 8422291290438273878, guid: 2dace722a8ec4c8448f68436709cc5d7, type: 3}
+>>>>>>> 6c01ddfedfdb23ab7224d9f19b0f4e71cc1c2b32
       propertyPath: m_LocalPosition.x
       value: 4.556668
       objectReference: {fileID: 0}
@@ -588,6 +592,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: GunPickup
       objectReference: {fileID: 0}
+<<<<<<< HEAD
+    - target: {fileID: 8806729226290996492, guid: 2dace722a8ec4c8448f68436709cc5d7, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8806729226290996492, guid: 2dace722a8ec4c8448f68436709cc5d7, type: 3}
+      propertyPath: InitialModule.startSpeed.scalar
+      value: 0.2
+      objectReference: {fileID: 0}
+=======
+>>>>>>> 6c01ddfedfdb23ab7224d9f19b0f4e71cc1c2b32
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
