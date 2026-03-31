@@ -283,8 +283,6 @@ public class CharacterLogic : MonoBehaviour
         Vector2 boxSize = new Vector2(1.5f, 1.35f);   // 第一个值是攻击方向长度，第二个是左右宽度
 
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
-        Debug.Log(attackDir);
-        Debug.DrawLine(hitBoxCenter - attackDir * 1.0f, hitBoxCenter + attackDir * 1.2f, Color.red, 0.8f);
         
         // 可选：画出盒子的四个角（更直观）
         Vector2 right = new Vector2(-attackDir.y, attackDir.x); // 垂直向量

@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class SimpleAutoSpotlight : MonoBehaviour
 {
+    private bool playerDetected = false;
+
     [Header("灯光设置")]
     public float lightRange = 15f;
     public float intensity = 5f;
@@ -9,35 +11,37 @@ public class SimpleAutoSpotlight : MonoBehaviour
     
     [Header("移动设置")]
     public float moveSpeed = 2.5f;
+    
     [Header("随机方向时间范围")]
-    public float minMoveInterval = 2f;     // 最小移动间隔
-    public float maxMoveInterval = 8f;     // 最大移动间隔
+    public float minMoveInterval = 2f;
+    public float maxMoveInterval = 8f;
     
     [Header("Bot检测设置")]
-    public float detectionRadius = 1.5f; // 探测半径
-    public Color botDetectionColor = Color.red; // 检测到Bot时的灯光颜色
-    
+    public float detectionRadius = 2.5f;
+    public Color botDetectionColor = Color.red;
+
+    [Header("实时光圈设置")]
+    public Color circleColor = Color.red;
+    public float circleThickness = 0.08f;
+    public int circleSegments = 60;
+    public bool showCircle = true;
+
     // 屏幕边界相关
     private Camera mainCamera;
     private float leftBound, rightBound, topBound, bottomBound;
     private float boundaryBuffer = 0.5f;
     
     private Light spotLight;
-    private Vector3 startPosition;
-    
-    // 随机移动相关
     private Vector2 currentDirection = Vector2.zero;
     private float directionTimer = 0f;
     private float nextChangeTime = 0f;
-    
+
+    private LineRenderer lineRenderer;
+
     void Start()
     {
-        // 获取主相机
         mainCamera = Camera.main;
-        if (mainCamera != null)
-        {
-            CalculateBounds();
-        }
+        if (mainCamera != null) CalculateBounds();
         
         // 初始化灯光
         spotLight = GetComponent<Light>();
@@ -49,15 +53,29 @@ public class SimpleAutoSpotlight : MonoBehaviour
         spotLight.color = lightColor;
         
         transform.rotation = Quaternion.Euler(-10, 0, 0);
-        startPosition = transform.position;
-        
-        // 初始化随机方向
+
         ChangeRandomDirection();
+        
+        CreateDetectionCircle();
         
         Debug.Log("探照灯初始化完成");
     }
-    
-    // 计算屏幕边界
+
+    private void CreateDetectionCircle()
+    {
+        lineRenderer = GetComponent<LineRenderer>();
+        if (lineRenderer == null)
+            lineRenderer = gameObject.AddComponent<LineRenderer>();
+
+        lineRenderer.positionCount = circleSegments + 1;
+        lineRenderer.startWidth = circleThickness;
+        lineRenderer.endWidth = circleThickness;
+        lineRenderer.loop = true;
+        lineRenderer.useWorldSpace = true;
+        lineRenderer.numCapVertices = 4;
+        lineRenderer.numCornerVertices = 4;
+    }
+
     private void CalculateBounds()
     {
         float size = mainCamera.orthographicSize;
@@ -72,46 +90,58 @@ public class SimpleAutoSpotlight : MonoBehaviour
         topBound = size - topOffset;
         bottomBound = -(size - bottomOffset);
     }
-    
-    // 检测并处理角色
+
     private void DetectAndHandleCharacters()
     {
-        // 检测范围内的所有碰撞体
-        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, detectionRadius);
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position + Vector3.up * 1.8f, detectionRadius);
         
-        // 存储当前检测到的Bot
-        CharacterLogic currentlyDetectedBot = null;
-        
-        foreach (Collider2D collider in colliders)
+        playerDetected = false;
+
+        foreach (Collider2D col in colliders)
         {
-            CharacterLogic character = collider.GetComponent<CharacterLogic>();
-            if (character != null)
+            if (col == null) continue;
+            CharacterLogic character = col.GetComponent<CharacterLogic>();
+            if (character == null) continue;
+            
+            if (character.currentRole != CharacterLogic.Role.Bot)
             {
-                if (character.currentRole != CharacterLogic.Role.Bot)
-                {
-                    currentlyDetectedBot = character;
-                }
+                playerDetected = true;
+                break;
             }
         }
-        // 更新灯光效果
-        if (currentlyDetectedBot != null)
-        {
-            // 检测到Bot时灯光变红
-            spotLight.color = Color.Lerp(spotLight.color, botDetectionColor, Time.deltaTime * 5f);
-        }
+        
+        // 更新灯光颜色
+        if (playerDetected)
+            spotLight.color = Color.Lerp(spotLight.color, botDetectionColor, Time.deltaTime * 8f);
         else
-        {
-            // 没有检测到Bot时恢复原色
-            spotLight.color = Color.Lerp(spotLight.color, lightColor, Time.deltaTime * 5f);
-        }
+            spotLight.color = Color.Lerp(spotLight.color, lightColor, Time.deltaTime * 6f);
     }
-    
-    // 边界检查
+
+    void Update()
+    {
+        // 移动逻辑
+        directionTimer += Time.deltaTime;
+        if (directionTimer >= nextChangeTime)
+            ChangeRandomDirection();
+
+        Vector3 moveDelta = new Vector3(currentDirection.x, currentDirection.y, 0) * moveSpeed * Time.deltaTime;
+        transform.position += moveDelta;
+
+        // 边界处理
+        if (CheckScreenBounds(out Vector3 correctedPos))
+        {
+            transform.position = correctedPos;
+            ChangeRandomDirection();
+        }
+
+        DetectAndHandleCharacters();
+    }
+
     private bool CheckScreenBounds(out Vector3 correctedPosition)
     {
         correctedPosition = transform.position;
         bool hitBoundary = false;
-        
+
         if (correctedPosition.x < leftBound + boundaryBuffer) 
         { 
             correctedPosition.x = leftBound + boundaryBuffer; 
@@ -136,39 +166,7 @@ public class SimpleAutoSpotlight : MonoBehaviour
         
         return hitBoundary;
     }
-    
-    void Update()
-    {
-        // 更新方向计时器
-        directionTimer += Time.deltaTime;
-        
-        // 到达方向变化时间
-        if (directionTimer >= nextChangeTime)
-        {
-            ChangeRandomDirection();
-        }
-        
-        // 根据当前方向移动
-        Vector3 moveDelta = new Vector3(currentDirection.x, currentDirection.y, 0) * moveSpeed * Time.deltaTime;
-        Vector3 newPos = transform.position + moveDelta;
-        
-        // 应用移动
-        transform.position = newPos;
-        
-        // 检查是否撞到边界
-        if (CheckScreenBounds(out Vector3 correctedPos))
-        {
-            transform.position = correctedPos;
-            
-            // 碰撞到边界后立即随机改变方向（修改点1：改为随机方向）
-            ChangeRandomDirection();
-        }
-        
-        // 检测并处理角色
-        DetectAndHandleCharacters();
-    }
-    
-    // 随机改变方向
+
     private void ChangeRandomDirection()
     {
         int directionIndex = Random.Range(0, 4);
@@ -182,35 +180,7 @@ public class SimpleAutoSpotlight : MonoBehaviour
         };
         
         currentDirection = currentDirection.normalized;
-        
-        // 随机设置下一次改变方向的时间（修改点2：改为随机时间）
         nextChangeTime = Random.Range(minMoveInterval, maxMoveInterval);
         directionTimer = 0f;
-    }
-    
-    // 可视化调试
-    void OnDrawGizmosSelected()
-    {
-        if (mainCamera == null) return;
-        
-        // 屏幕边界
-        Gizmos.color = new Color(0, 1, 1, 0.3f);
-        Gizmos.DrawWireCube(
-            new Vector3((leftBound + rightBound) * 0.5f, (topBound + bottomBound) * 0.5f, 0),
-            new Vector3(rightBound - leftBound, topBound - bottomBound, 0)
-        );
-        
-        // 当前位置
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, 0.2f);
-        
-        // 当前移动方向
-        Gizmos.color = Color.red;
-        Vector3 endPoint = transform.position + new Vector3(currentDirection.x, currentDirection.y, 0) * 1f;
-        Gizmos.DrawLine(transform.position, endPoint);
-        
-        // Bot检测范围
-        Gizmos.color = new Color(1f, 0f, 0f, 0.2f);
-        Gizmos.DrawWireSphere(transform.position, detectionRadius);
     }
 }

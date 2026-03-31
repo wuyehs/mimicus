@@ -281,7 +281,7 @@ SpriteRenderer:
   m_SortingLayerID: 328113983
   m_SortingLayer: -1
   m_SortingOrder: -10
-  m_Sprite: {fileID: 21300000, guid: ec8645ecdb40f9a4fb9235f1e4c54042, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 09a22f0e3a3c63b448363c18664640bc, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -338,7 +338,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 0}
-  debugMode: 1
+  debugMode: 0
   cameraSize: 5
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}
   charPrefab: {fileID: 255330424199105387, guid: 07e60d14f26505f4fb309fc0b004063a, type: 3}
@@ -397,8 +397,12 @@ MonoBehaviour:
   moveSpeed: 2.5
   minMoveInterval: 2
   maxMoveInterval: 8
-  detectionRadius: 1.5
+  detectionRadius: 2.5
   botDetectionColor: {r: 1, g: 0, b: 0, a: 1}
+  circleColor: {r: 1, g: 0, b: 0, a: 1}
+  circleThickness: 0.08
+  circleSegments: 60
+  showCircle: 1
 --- !u!108 &1239674030
 Light:
   m_ObjectHideFlags: 0
@@ -729,8 +733,12 @@ MonoBehaviour:
   moveSpeed: 2.5
   minMoveInterval: 2
   maxMoveInterval: 8
-  detectionRadius: 1.5
+  detectionRadius: 2.5
   botDetectionColor: {r: 1, g: 0, b: 0, a: 1}
+  circleColor: {r: 1, g: 0, b: 0, a: 1}
+  circleThickness: 0.08
+  circleSegments: 60
+  showCircle: 1
 --- !u!108 &2145547201
 Light:
   m_ObjectHideFlags: 0
