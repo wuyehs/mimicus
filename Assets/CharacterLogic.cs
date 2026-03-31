@@ -10,7 +10,7 @@ public class CharacterLogic : MonoBehaviour
 
     public enum WeaponType { Melee, Gun }
     public WeaponType currentWeapon = WeaponType.Melee;   // 当前武器
-    public Vector2 shootOffset = new Vector2(0.8f, 0f);  // 枪口偏移
+    public Vector2 shootOffset = new Vector2(0.4f, 0f);  // 枪口偏移
     public float shootRange = 10f;       
     
     [Header("移动设置")]
