@@ -51,6 +51,11 @@ public class CharacterLogic : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         characterCollider = GetComponent<Collider2D>();
+        BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
+        if (boxCollider != null)
+        {
+            boxCollider.size = new Vector2(0.3125f, 0.46875f);
+        }
     }
 
     void Start()
@@ -234,49 +239,65 @@ public class CharacterLogic : MonoBehaviour
     }
 
     void Attack()
+{
+    if (isDead || isAttacking) return;
+
+    Vector2 attackDir = lastMoveDir.normalized;
+    if (attackDir == Vector2.zero) attackDir = Vector2.right;
+    Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;   // 往回拉一点，更容易覆盖正前方
+    hitBoxCenter.y += 1f;
+
+    if (currentWeapon == WeaponType.Gun)
     {
-        // 冷却与攻击状态检查（仅近战有冷却，射击有自己的冷却）
-        if (currentWeapon == WeaponType.Melee && !CanAttack()) return;
+        // ==================== 枪械射击 ====================
+        Vector2 origin = hitBoxCenter + shootOffset * attackDir;
+        
+        RaycastHit2D[] hits = Physics2D.CircleCastAll(origin, 0.25f, attackDir, shootRange);
+        
+        Debug.DrawRay(origin, attackDir * shootRange, Color.red, 0.8f);
 
-        if (currentWeapon == WeaponType.Gun)
-        {
-            Vector2 shootDir = lastMoveDir.normalized;
-            if (shootDir == Vector2.zero) shootDir = Vector2.right;
+        Collider2D[] hitColliders = System.Array.ConvertAll(hits, h => h.collider);
 
-            Vector2 origin = (Vector2)transform.position + shootOffset * shootDir;
-            RaycastHit2D[] hits = Physics2D.RaycastAll(origin, shootDir, shootRange);
-            Debug.DrawRay(origin, shootDir * shootRange, Color.red, 0.2f);
-
-            // 将射线命中转换为碰撞体数组
-            Collider2D[] hitColliders = new Collider2D[hits.Length];
-            for (int i = 0; i < hits.Length; i++) hitColliders[i] = hits[i].collider;
-
-            // 统一处理命中目标
-            ProcessHitTargets(hitColliders);
-            currentWeapon = WeaponType.Melee;
-        }
-        else // 近战攻击
-        {
-            lastAttackTime = Time.time;
-
-            if (animator != null)
-                animator.SetTrigger("Attack");
-
-            isAttacking = true;
-            moveDir = Vector2.zero;
-            isStopped = true;
-            StartCoroutine(WaitForAttackEnd());
-
-            if (spriteRenderer != null)
-                StartCoroutine(AttackFlash());
-
-            Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
-            Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
-
-            // 统一处理命中目标
-            ProcessHitTargets(hitColliders);
-        }
+        ProcessHitTargets(hitColliders);
+        
+        currentWeapon = WeaponType.Melee;
     }
+    else
+    {
+        lastAttackTime = Time.time;
+
+        if (animator != null)
+            animator.SetTrigger("Attack");
+
+        isAttacking = true;
+        moveDir = Vector2.zero;
+        isStopped = true;
+
+        StartCoroutine(WaitForAttackEnd());
+        if (spriteRenderer != null)
+            StartCoroutine(AttackFlash());
+
+        float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
+
+        // 长度（朝攻击方向）加大，宽度适当
+        Vector2 boxSize = new Vector2(1.5f, 1.35f);   // 第一个值是攻击方向长度，第二个是左右宽度
+
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
+        Debug.Log(attackDir);
+        Debug.DrawLine(hitBoxCenter - attackDir * 1.0f, hitBoxCenter + attackDir * 1.2f, Color.red, 0.8f);
+        
+        // 可选：画出盒子的四个角（更直观）
+        Vector2 right = new Vector2(-attackDir.y, attackDir.x); // 垂直向量
+        Vector2 halfSize = boxSize * 0.5f;
+        
+        Vector2 p1 = hitBoxCenter + attackDir * halfSize.x + right * halfSize.y;
+        Vector2 p2 = hitBoxCenter + attackDir * halfSize.x - right * halfSize.y;
+        Vector2 p3 = hitBoxCenter - attackDir * halfSize.x - right * halfSize.y;
+        Vector2 p4 = hitBoxCenter - attackDir * halfSize.x + right * halfSize.y;
+
+        ProcessHitTargets(hitColliders);
+    }
+}
 
 // ========== 公共目标处理 ==========
 private void ProcessHitTargets(Collider2D[] hits)
