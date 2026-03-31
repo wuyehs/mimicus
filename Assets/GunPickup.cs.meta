@@ -3,7 +3,9 @@ guid: DHIb5HyrUnt/OyqcI8ysK6RLK85JdUNnpatk34SiEZQAJhbr0gedDEU=
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - spawnEffect: {fileID: 6592012621208210277, guid: 83653a1ff18249843bd6c2767b73af90, type: 3}
+  - despawnEffect: {fileID: 6155521142681643216, guid: ba4c5a5fe55a7684da94b3420a1ef7e7, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
