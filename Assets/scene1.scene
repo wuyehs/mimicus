@@ -601,8 +601,6 @@ PrefabInstance:
       propertyPath: InitialModule.startSpeed.scalar
       value: 0.2
       objectReference: {fileID: 0}
-=======
->>>>>>> 6c01ddfedfdb23ab7224d9f19b0f4e71cc1c2b32
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
