@@ -163,7 +163,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.8, y: 0.8}
+  m_Size: {x: 0.3125, y: 0.46875}
   m_EdgeRadius: 0
 --- !u!114 &5896812537794254247
 MonoBehaviour:
@@ -179,7 +179,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentRole: 0
   debugMode: 0
-  characterScale: 2
+  currentWeapon: 0
+  shootOffset: {x: 0.8, y: 0}
+  shootRange: 10
   moveSpeed: 3.5
   smoothSpeed: 10
   attackRange: 1.5
