@@ -95,7 +95,7 @@ MonoBehaviour:
   currentWeapon: 0
   shootOffset: {x: 0.8, y: 0}
   shootRange: 10
-  moveSpeed: 2
+  moveSpeed: 3
   smoothSpeed: 10
   attackRange: 1.5
   attackCooldown: 5

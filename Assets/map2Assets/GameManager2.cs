@@ -14,7 +14,7 @@ public class GameManager2 : MonoBehaviour
     public bool debugMode = true;
     
     [Header("摄像机设置")]
-    [SerializeField] private float cameraSize = 5f;
+    [SerializeField] private float cameraSize = 10f;
     [SerializeField] private Color backgroundColor = Color.black;
 
     [Header("游戏设置")]
