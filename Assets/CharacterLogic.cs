@@ -28,7 +28,7 @@ public class CharacterLogic : MonoBehaviour
     private float lastAttackTime = 0f;
     private SpriteRenderer spriteRenderer;
     
-    // 新增：默认颜色（非调试模式使用）
+    // 默认颜色（非调试模式使用）
     private static readonly Color defaultColor = Color.white;
 
     // ===== 动画控制 =====
@@ -37,12 +37,17 @@ public class CharacterLogic : MonoBehaviour
     private bool isDead = false;
     private float attackAnimLength = 0.5f;
 
-    // 新增：碰撞盒引用
+    // 碰撞盒引用
     private Collider2D characterCollider;
     
-    // 新增：传送动画预制体
+    // 传送动画预制体
     [Header("测试特效")]
     public GameObject teleportEffectPrefab;  // 在Inspector中拖入teleport预制体
+
+    // ===== 烟雾弹系统 =====
+    [Header("烟雾弹设置")]
+    private bool hasSmokeEffect = false;               // 是否拥有烟雾弹效果
+    public GameObject smokeEffectPrefab;               // 烟雾特效预制体（在Inspector中拖入）
     
     private Camera mainCamera;
     private float leftBound, rightBound, topBound, bottomBound;
@@ -112,8 +117,15 @@ public class CharacterLogic : MonoBehaviour
     {
         currentWeapon = WeaponType.Gun;
     }
-    // 修改：获取动画方向
 
+    // ===== 烟雾弹拾取方法 =====
+    public void PickUpSmokeGrenade()
+    {
+        hasSmokeEffect = true;
+        // 可选：播放拾取音效，显示UI提示
+    }
+
+    // 获取动画方向
     private Vector2 GetAnimationDirection(Vector2 inputDir)
     {
         if (inputDir.magnitude < 0.1f) return Vector2.right;
@@ -336,6 +348,15 @@ public class CharacterLogic : MonoBehaviour
 
         if (bestTarget != null)
         {
+            // ===== 烟雾弹效果：如果拥有，则在目标位置生成烟雾特效并消耗效果 =====
+            if (hasSmokeEffect && smokeEffectPrefab != null)
+            {
+                GameObject smoke = Instantiate(smokeEffectPrefab, bestTarget.transform.position, Quaternion.identity);
+                // 如果特效预制体没有自带销毁脚本，这里强制销毁（假设动画时长为5秒）
+                Destroy(smoke, 5f);
+                hasSmokeEffect = false;
+            }
+
             bestTarget.Die();
 
             if (bestTarget.currentRole == Role.Player1)
