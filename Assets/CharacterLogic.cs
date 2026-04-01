@@ -12,7 +12,7 @@ public class CharacterLogic : MonoBehaviour
     public WeaponType currentWeapon = WeaponType.Melee;   // 当前武器
     public Vector2 shootOffset = new Vector2(0.4f, 0f);  // 枪口偏移
     public float shootRange = 10f;   
-    public float bombRadius = 3f;     
+    public float bombRadius = 2f;     
     
     [Header("移动设置")]
     public float moveSpeed = 2f;
