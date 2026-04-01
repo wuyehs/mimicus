@@ -186,6 +186,7 @@ MonoBehaviour:
   smoothSpeed: 10
   attackRange: 1.5
   attackCooldown: 5
+  teleportEffectPrefab: {fileID: 5435274715019816631, guid: 513cfb3a1eddbc549a956f9917a035f0, type: 3}
 --- !u!95 &533247761865982454
 Animator:
   serializedVersion: 6

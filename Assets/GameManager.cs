@@ -17,6 +17,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Color backgroundColor = Color.black;
 
     [Header("游戏设置")]
+    public int Map_id = 1;
     public GameObject charPrefab;
     public int totalCharacters = 20;
     
