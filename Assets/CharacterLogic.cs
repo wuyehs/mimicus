@@ -8,10 +8,11 @@ public class CharacterLogic : MonoBehaviour
 
     public bool debugMode = false;
 
-    public enum WeaponType { Melee, Gun }
+    public enum WeaponType { Melee, Gun, Bomb}
     public WeaponType currentWeapon = WeaponType.Melee;   // 当前武器
     public Vector2 shootOffset = new Vector2(0.4f, 0f);  // 枪口偏移
-    public float shootRange = 10f;       
+    public float shootRange = 10f;   
+    public float bombRadius = 3f;     
     
     [Header("移动设置")]
     public float moveSpeed = 2f;
@@ -43,6 +44,7 @@ public class CharacterLogic : MonoBehaviour
     // 传送动画预制体
     [Header("测试特效")]
     public GameObject teleportEffectPrefab;  // 在Inspector中拖入teleport预制体
+    public GameObject explosionEffectPrefab; 
 
     // ===== 烟雾弹系统 =====
     [Header("烟雾弹设置")]
@@ -116,6 +118,10 @@ public class CharacterLogic : MonoBehaviour
     public void PickUpGun()
     {
         currentWeapon = WeaponType.Gun;
+    }
+    public void PickUpBomb()
+    {
+        currentWeapon = WeaponType.Bomb;
     }
 
     // ===== 烟雾弹拾取方法 =====
@@ -262,23 +268,22 @@ public class CharacterLogic : MonoBehaviour
         return Time.time - lastAttackTime >= attackCooldown && !isAttacking && !isDead;
     }
 
-    void Attack()
+     void Attack()
     {
         if (isDead || isAttacking) return;
-
-        Vector2 attackDir = lastMoveDir.normalized;
-        if (attackDir == Vector2.zero) attackDir = Vector2.right;
-        Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;   // 往回拉一点，更容易覆盖正前方
-        hitBoxCenter.y += 1f;
 
         if (currentWeapon == WeaponType.Gun)
         {
             // ==================== 枪械射击 ====================
-            Vector2 origin = hitBoxCenter + shootOffset * attackDir;
+            Vector2 shootDir = lastMoveDir.normalized;
+            if (shootDir == Vector2.zero) shootDir = Vector2.right;
             
-            RaycastHit2D[] hits = Physics2D.CircleCastAll(origin, 0.25f, attackDir, shootRange);
+            Vector2 origin = (Vector2)transform.position + shootOffset + shootDir * 0.65f;
+            origin.y += 1f;
             
-            Debug.DrawRay(origin, attackDir * shootRange, Color.red, 0.8f);
+            RaycastHit2D[] hits = Physics2D.CircleCastAll(origin, 0.25f, shootDir, shootRange);
+            
+            Debug.DrawRay(origin, shootDir * shootRange, Color.red, 0.8f);
 
             Collider2D[] hitColliders = System.Array.ConvertAll(hits, h => h.collider);
 
@@ -286,8 +291,9 @@ public class CharacterLogic : MonoBehaviour
             
             currentWeapon = WeaponType.Melee;
         }
-        else
+        else if (currentWeapon == WeaponType.Bomb)
         {
+            // ==================== 炸弹攻击 ====================
             lastAttackTime = Time.time;
 
             if (animator != null)
@@ -301,10 +307,58 @@ public class CharacterLogic : MonoBehaviour
             if (spriteRenderer != null)
                 StartCoroutine(AttackFlash());
 
+            // 播放爆炸特效
+            PlayExplosionAtPosition(transform.position + Vector3.up * 1f);
+            
+            // 检测爆炸范围内的所有人物
+            Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position + Vector3.up * 1f, bombRadius);
+            
+            foreach (Collider2D hit in hitColliders)
+            {
+                if (hit == null || hit.gameObject == gameObject) continue;
+                
+                CharacterLogic target = hit.GetComponent<CharacterLogic>();
+                if (target != null && !target.isDead)
+                {
+                    // 杀死范围内的所有人物
+                    target.Die();
+                    
+                    // 检查是否有玩家死亡，触发游戏结束
+                    if (target.currentRole == Role.Player1)
+                        GameManager.instance.EndGame("玩家二（红）获胜！");
+                    else if (target.currentRole == Role.Player2)
+                        GameManager.instance.EndGame("玩家一（蓝）获胜！");
+                }
+            }
+            
+            // 炸弹使用后变回近战武器
+            currentWeapon = WeaponType.Melee;
+        }
+        else
+        {
+            // ==================== 近战攻击 ====================
+            lastAttackTime = Time.time;
+
+            if (animator != null)
+                animator.SetTrigger("Attack");
+
+            isAttacking = true;
+            moveDir = Vector2.zero;
+            isStopped = true;
+
+            StartCoroutine(WaitForAttackEnd());
+            if (spriteRenderer != null)
+                StartCoroutine(AttackFlash());
+
+            Vector2 attackDir = lastMoveDir.normalized;
+            if (attackDir == Vector2.zero) attackDir = Vector2.right;
+            
             float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
 
             // 长度（朝攻击方向）加大，宽度适当
             Vector2 boxSize = new Vector2(1.5f, 1.35f);   // 第一个值是攻击方向长度，第二个是左右宽度
+            Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;
+            hitBoxCenter.y += 1f;
 
             Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
             
@@ -351,9 +405,7 @@ public class CharacterLogic : MonoBehaviour
             // ===== 烟雾弹效果：如果拥有，则在目标位置生成烟雾特效并消耗效果 =====
             if (hasSmokeEffect && smokeEffectPrefab != null)
             {
-                GameObject smoke = Instantiate(smokeEffectPrefab, bestTarget.transform.position, Quaternion.identity);
-                // 如果特效预制体没有自带销毁脚本，这里强制销毁（假设动画时长为5秒）
-                Destroy(smoke, 5f);
+                GameObject smoke = Instantiate(smokeEffectPrefab, bestTarget.transform.position + Vector3.up * 1f, Quaternion.identity);
                 hasSmokeEffect = false;
             }
 
@@ -490,7 +542,25 @@ public class CharacterLogic : MonoBehaviour
         }
     }
     
-    // === 新增协程：延迟销毁两个Bot ===
+    private void PlayExplosionAtPosition(Vector3 position)
+    {
+        if (explosionEffectPrefab == null)
+        {
+            Debug.LogWarning("Explosion effect prefab is not assigned!");
+            return;
+        }
+        
+        // 创建爆炸特效
+        GameObject explosion = Instantiate(explosionEffectPrefab, position, Quaternion.identity);
+        
+        // 检查并设置SpriteRenderer
+        SpriteRenderer explosionRenderer = explosion.GetComponent<SpriteRenderer>();
+        if (explosionRenderer != null)
+        {
+            explosionRenderer.sortingOrder = 99; // 略低于传送特效
+        }
+        explosion.transform.localScale = new Vector3(bombRadius * 0.7f, bombRadius * 0.7f, 1f);
+    }
     private IEnumerator DelayedDestroyBoth(CharacterLogic otherBot)
     {
         // 短暂延迟，确保视觉效果

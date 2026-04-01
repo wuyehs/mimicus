@@ -178,15 +178,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentRole: 0
-  debugMode: 0
+  debugMode: 1
   currentWeapon: 0
   shootOffset: {x: 0.8, y: 0}
   shootRange: 10
+  bombRadius: 2
   moveSpeed: 3.5
   smoothSpeed: 10
   attackRange: 1.5
   attackCooldown: 5
   teleportEffectPrefab: {fileID: 5435274715019816631, guid: 513cfb3a1eddbc549a956f9917a035f0, type: 3}
+  explosionEffectPrefab: {fileID: 6597782370894767191, guid: bda760e905437ac458dad09f009430ca, type: 3}
   smokeEffectPrefab: {fileID: 4074625632213861057, guid: 2e42e198c44f3ed4aa6492f3c3dcb94a, type: 3}
 --- !u!95 &533247761865982454
 Animator:
