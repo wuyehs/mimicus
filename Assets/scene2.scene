@@ -158,7 +158,8 @@ MonoBehaviour:
   debugMode: 1
   cameraSize: 5
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}
-  charPrefab: {fileID: 0}
+  Map_id: 2
+  charPrefab: {fileID: 255330424199105387, guid: 07e60d14f26505f4fb309fc0b004063a, type: 3}
   totalCharacters: 20
   winText: {fileID: 0}
 --- !u!4 &821717095
@@ -380,12 +381,12 @@ SpriteRenderer:
   m_SortingLayerID: 328113983
   m_SortingLayer: -1
   m_SortingOrder: -10
-  m_Sprite: {fileID: 21300000, guid: 3c1ca7ab9d51a884a9b8da596205c8bb, type: 3}
+  m_Sprite: {fileID: 21300000, guid: a5ce92f7fc541924ca97f9428ef1fce5, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 36.210526, y: 20.210526}
+  m_Size: {x: 12.8, y: 7.2}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
