@@ -13,17 +13,32 @@ public class MenuUI : MonoBehaviour
     public Slider volumeSlider;
     public Toggle fullscreenToggle;
     public TMP_Dropdown resolutionDropdown;
+    public AudioSource bgmSource;
 
     public TMP_Text descriptionTitle;
     public TMP_Text descriptionText;
 
     void Start()
     {
-        if (volumeSlider != null)
-            volumeSlider.value = AudioListener.volume;
+        if (volumeSlider != null && bgmSource != null)
+        {
+            volumeSlider.SetValueWithoutNotify(bgmSource.volume);
+            volumeSlider.onValueChanged.RemoveAllListeners();
+            volumeSlider.onValueChanged.AddListener(SetVolume);
+        }
 
         if (fullscreenToggle != null)
-            fullscreenToggle.isOn = Screen.fullScreen;
+        {
+            fullscreenToggle.SetIsOnWithoutNotify(Screen.fullScreen);
+            fullscreenToggle.onValueChanged.RemoveAllListeners();
+            fullscreenToggle.onValueChanged.AddListener(SetFullscreen);
+        }
+
+        if (resolutionDropdown != null)
+        {
+            resolutionDropdown.onValueChanged.RemoveAllListeners();
+            resolutionDropdown.onValueChanged.AddListener(SetResolution);
+        }
 
         ShowDefaultMapInfo();
     }
@@ -90,7 +105,8 @@ public class MenuUI : MonoBehaviour
 
     public void SetVolume(float value)
     {
-        AudioListener.volume = value;
+        if (bgmSource != null)
+            bgmSource.volume = value;
     }
 
     public void SetFullscreen(bool isFullscreen)
