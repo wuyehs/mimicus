@@ -109,11 +109,11 @@ public class VolcanoLavaController : MonoBehaviour
         {
             if (victim.currentRole == CharacterLogic.Role.Player1)
             {
-                GameManager.instance.EndGame("玩家一掉入岩浆！玩家二（红）获胜！"); 
+                GameManager.instance.EndGame("PLAYER 2 WINS!"); 
             }
             else if (victim.currentRole == CharacterLogic.Role.Player2)
             {
-                GameManager.instance.EndGame("玩家二掉入岩浆！玩家一（蓝）获胜！"); 
+                GameManager.instance.EndGame("PLAYER 1 WINS!"); 
             }
         }
     }

@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
+using TMPro;
 
 public class CharacterLogic : MonoBehaviour
 {
@@ -16,6 +18,10 @@ public class CharacterLogic : MonoBehaviour
     public Vector2 shootOffset = new Vector2(0.4f, 0f);
     public float shootRange = 10f;       
     public float bombRadius = 3f;     
+    public float bombCountdown = 3f;  // 新增：炸弹倒计时时长
+    
+    [Header("炸弹倒计时UI")]
+    public GameObject bombCountdownUI;  // 倒计时UI预制体
     
     [Header("移动设置")]
     public float moveSpeed = 2f;
@@ -39,6 +45,12 @@ public class CharacterLogic : MonoBehaviour
     private bool isAttacking = false;
     private bool isDead = false;
     private float attackAnimLength = 0.5f;
+    
+    // 新增：炸弹相关变量
+    private float bombTimer = 0f;
+    private bool bombActive = false;
+    private GameObject bombUIInstance = null;
+    private TextMeshProUGUI bombText = null;
 
     private Collider2D characterCollider;
     
@@ -49,6 +61,7 @@ public class CharacterLogic : MonoBehaviour
     
     private Camera mainCamera;
     private float leftBound, rightBound, topBound, bottomBound;
+    private bool bombAnimation = false;
 
     void Awake()
     {
@@ -91,6 +104,22 @@ public class CharacterLogic : MonoBehaviour
     void Update()
     {
         if (isDead) return;
+        
+        // 新增：炸弹倒计时更新
+        if (bombActive)
+        {
+            bombTimer -= Time.deltaTime;
+            UpdateBombUI();
+            if(bombTimer <= 0.6f && bombAnimation)
+            {
+                bombAnimation = false;
+                PlayExplosionAtPosition(transform.position + Vector3.up * 1f);
+            }
+            if (bombTimer <= 0f)
+            {
+                ExplodeBomb();
+            }
+        }
 
         if (animator != null)
         {
@@ -286,24 +315,8 @@ public class CharacterLogic : MonoBehaviour
         }
         else if (currentTool == ToolType.Bomb)
         {
-            PlayExplosionAtPosition(transform.position + Vector3.up * 1f);
-            Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position + Vector3.up * 1f, bombRadius);
-            
-            foreach (Collider2D hit in hitColliders)
-            {
-                if (hit == null || hit.gameObject == gameObject) continue;
-                
-                CharacterLogic target = hit.GetComponent<CharacterLogic>();
-                if (target != null && !target.isDead)
-                {
-                    target.Die();
-                    
-                    if (target.currentRole == Role.Player1)
-                        GameManager.instance.EndGame("玩家二（红）获胜！");
-                    else if (target.currentRole == Role.Player2)
-                        GameManager.instance.EndGame("玩家一（蓝）获胜！");
-                }
-            }
+            StartBombCountdown();
+            bombAnimation = true;
         }
         else if (currentTool == ToolType.Smoke)
         {
@@ -315,6 +328,158 @@ public class CharacterLogic : MonoBehaviour
         }
         
         currentTool = ToolType.None;
+    }
+    
+    // 新增：启动炸弹倒计时
+    private void StartBombCountdown()
+    {
+        bombTimer = bombCountdown;
+        bombActive = true;
+        
+        // 创建UI
+        if (bombCountdownUI != null && bombUIInstance == null)
+        {
+            bombUIInstance = Instantiate(bombCountdownUI, transform);
+            
+            // 获取TextMeshPro组件
+            bombText = bombUIInstance.GetComponentInChildren<TextMeshProUGUI>();
+            if (bombText != null)
+            {
+                bombText.text = Mathf.CeilToInt(bombTimer).ToString();
+            }
+        }
+    }
+    
+    // 新增：更新炸弹UI
+    private void UpdateBombUI()
+    {
+        if (bombUIInstance != null)
+        {
+            // 跟随角色
+            bombUIInstance.transform.position = transform.position  + Vector3.right * 0.9f + Vector3.up * 2f;
+            
+            // 更新倒计时显示
+            if (bombText != null)
+            {
+                int displayTime = Mathf.CeilToInt(bombTimer);
+                bombText.text = displayTime.ToString();
+                
+                // 颜色闪烁效果
+                if (bombTimer <= 3f)
+                {
+                    bombText.color = Color.Lerp(Color.red, Color.white, Mathf.PingPong(Time.time * 5f, 1f));
+                }
+                else
+                {
+                    bombText.color = Color.yellow;
+                }
+            }
+        }
+    }
+    
+    // 新增：炸弹爆炸
+    private void ExplodeBomb()
+    {
+        bombActive = false;
+        
+        // 检测爆炸范围内的所有角色
+        Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position + Vector3.up * 1f, bombRadius);
+        
+        bool killedEnemyPlayer = false;
+        bool killedSelf = false;
+        
+        foreach (Collider2D hit in hitColliders)
+        {
+            if (hit == null || hit.gameObject == gameObject) continue;
+            
+            CharacterLogic target = hit.GetComponent<CharacterLogic>();
+            if (target != null && !target.isDead)
+            {
+                // 杀死范围内的所有人物
+                target.Die();
+                
+                // 检查是否杀死了敌方玩家
+                if (target.currentRole != currentRole)
+                {
+                    if ( target.currentRole != Role.Bot)
+                    {
+                        killedEnemyPlayer = true;
+                    }
+                }
+            }
+        }
+        
+        // 清理UI
+        if (bombUIInstance != null)
+        {
+            Destroy(bombUIInstance);
+            bombUIInstance = null;
+            bombText = null;
+        }
+        
+        // 重置工具
+        currentTool = ToolType.None;
+        
+        // 判定胜负
+        if (GameManager.instance != null)
+        {
+            if (killedEnemyPlayer)
+            {
+                // 杀死了敌方玩家，当前玩家获胜
+                if (currentRole == Role.Player1)
+                {
+                    GameManager.instance.EndGame("PLAYER 1 WINS!");
+                }
+                else if (currentRole == Role.Player2)
+                {
+                    GameManager.instance.EndGame("PLAYER 2 WINS!");
+                }
+            }
+            else
+            {
+                // 只炸死了自己，对方获胜
+                if (currentRole == Role.Player1)
+                {
+                    GameManager.instance.EndGame("PLAYER 2 WINS!");
+                }
+                else if (currentRole == Role.Player2)
+                {
+                    GameManager.instance.EndGame("PLAYER 1 WINS!");
+                }
+            }
+        }
+    }
+    
+    // 修改：死亡时清理炸弹
+    public void Die()
+    {
+        if (isDead) return;
+        isDead = true;
+        
+        // 清理炸弹UI
+        if (bombUIInstance != null)
+        {
+            Destroy(bombUIInstance);
+            bombUIInstance = null;
+            bombText = null;
+        }
+        
+        // 停止炸弹倒计时
+        bombActive = false;
+
+        if (animator != null)
+        {
+            animator.SetTrigger("Die");
+            animator.SetFloat("Speed", 0);
+        }
+
+        rb.velocity = Vector2.zero;
+        moveDir = Vector2.zero;
+        isStopped = true;
+        isAttacking = false;
+        StopAllCoroutines();
+
+        StartCoroutine(DieAndDestroyAfterAnimation());
     }
 
     void Attack()
@@ -374,9 +539,9 @@ public class CharacterLogic : MonoBehaviour
         {
             bestTarget.Die();
             if (bestTarget.currentRole == Role.Player1)
-                GameManager.instance.EndGame("玩家二（红）获胜！");
+                GameManager.instance.EndGame("PLAYER 2 WINS!");
             else if (bestTarget.currentRole == Role.Player2)
-                GameManager.instance.EndGame("玩家一（蓝）获胜！");
+                GameManager.instance.EndGame("PLAYER 1 WINS!");
         }
     }
 

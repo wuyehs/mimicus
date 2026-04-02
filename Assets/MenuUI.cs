@@ -13,17 +13,32 @@ public class MenuUI : MonoBehaviour
     public Slider volumeSlider;
     public Toggle fullscreenToggle;
     public TMP_Dropdown resolutionDropdown;
+    public AudioSource bgmSource;
 
     public TMP_Text descriptionTitle;
     public TMP_Text descriptionText;
 
     void Start()
     {
-        if (volumeSlider != null)
-            volumeSlider.value = AudioListener.volume;
+        if (volumeSlider != null && bgmSource != null)
+        {
+            volumeSlider.SetValueWithoutNotify(bgmSource.volume);
+            volumeSlider.onValueChanged.RemoveAllListeners();
+            volumeSlider.onValueChanged.AddListener(SetVolume);
+        }
 
         if (fullscreenToggle != null)
-            fullscreenToggle.isOn = Screen.fullScreen;
+        {
+            fullscreenToggle.SetIsOnWithoutNotify(Screen.fullScreen);
+            fullscreenToggle.onValueChanged.RemoveAllListeners();
+            fullscreenToggle.onValueChanged.AddListener(SetFullscreen);
+        }
+
+        if (resolutionDropdown != null)
+        {
+            resolutionDropdown.onValueChanged.RemoveAllListeners();
+            resolutionDropdown.onValueChanged.AddListener(SetResolution);
+        }
 
         ShowDefaultMapInfo();
     }
@@ -79,18 +94,19 @@ public class MenuUI : MonoBehaviour
     public void LoadMap2()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("SampleScene");
+        SceneManager.LoadScene("map2valcano");
     }
 
     public void LoadMap3()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("Scene1");
+        SceneManager.LoadScene("Scene2");
     }
 
     public void SetVolume(float value)
     {
-        AudioListener.volume = value;
+        if (bgmSource != null)
+            bgmSource.volume = value;
     }
 
     public void SetFullscreen(bool isFullscreen)
@@ -98,32 +114,32 @@ public class MenuUI : MonoBehaviour
         Screen.fullScreen = isFullscreen;
     }
 
-    //µØÍ¼Ñ¡ÔñÎÄ±¾Ïà¹Ø´úÂë
+    //ï¿½ï¿½Í¼Ñ¡ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½Ø´ï¿½ï¿½ï¿½
     public void ShowMap1Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "MAP¡¡ONE";
+            descriptionTitle.text = "Iron Cage";
 
         if (descriptionText != null)
-            descriptionText.text = "abc";
+            descriptionText.text = "Judgment Spotlight: Turns Red for humans, white for AI. Hide or be exposed.";
     }
 
     public void ShowMap2Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "MAP TWO";
+            descriptionTitle.text = "Volcanic Island";
 
         if (descriptionText != null)
-            descriptionText.text = "def";
+            descriptionText.text = "Lava Erosion: The safe zone shrinks. Stay inside the boundary or perish.";
     }
 
     public void ShowMap3Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "MAP THRIE";
+            descriptionTitle.text = "Starship";
 
         if (descriptionText != null)
-            descriptionText.text = "hij";
+            descriptionText.text = "Collision Annihilation: AI bots destroy each other on contact, stripping your cover fast.";
     }
     public void ShowDefaultMapInfo()
     {
@@ -133,7 +149,7 @@ public class MenuUI : MonoBehaviour
         if (descriptionText != null)
             descriptionText.text = "PLEASE SELECT A MAP";
     }
-    //ÎÄ±¾´úÂë½áÊø
+    //ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     public void SetResolution(int index)
     {

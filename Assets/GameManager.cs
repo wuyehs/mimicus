@@ -48,6 +48,9 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI winText;
     
     private bool isGameOver = false;
+    //新增胜利判定
+    public static string finalWinnerMessage = "";
+    public static string lastLevelSceneName = "";
 
     void Awake()
     {
@@ -72,6 +75,9 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         Time.timeScale = 1f;
+        //新增
+        lastLevelSceneName = SceneManager.GetActiveScene().name;
+
         if (winText != null) winText.gameObject.SetActive(false);
         SpawnCharacters();
     }
@@ -168,13 +174,9 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
         isGameOver = true;
+        finalWinnerMessage = winnerMessage;
 
-        if (winText != null)
-        {
-            winText.gameObject.SetActive(true);
-            winText.text = winnerMessage + "\npress R key to restart";
-        }
-
-        Time.timeScale = 0f;
+        Time.timeScale = 1f;
+        SceneManager.LoadScene("VictoryScene");
     }
 }
