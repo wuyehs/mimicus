@@ -397,13 +397,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a875b16ed1a39cd4d890dc595112fbfc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minSpawnDelay: 5
-  maxSpawnDelay: 20
+  minSpawnDelay: 3
+  maxSpawnDelay: 8
   spawnOnlyWhenEmpty: 1
   weaponPrefabs:
   - {fileID: 6878891187015341860, guid: 778d2d1987de63c4285e33daf2b190fd, type: 3}
-  - {fileID: 82295509368719376, guid: d01ecc6ce4d83874c852ffca70bcfacb, type: 3}
   - {fileID: 6680725098652348737, guid: 2dace722a8ec4c8448f68436709cc5d7, type: 3}
+  - {fileID: 82295509368719376, guid: d01ecc6ce4d83874c852ffca70bcfacb, type: 3}
+  - {fileID: 4770669599796149627, guid: c4bb4b0fa19c8874f9425fda0c0aee7e, type: 3}
+  pickupLifetime: 6
 --- !u!4 &539820923
 Transform:
   m_ObjectHideFlags: 0

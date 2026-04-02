@@ -620,25 +620,7 @@ public class CharacterLogic : MonoBehaviour
     }
     // ==================== 召唤逻辑结束 ====================
 
-    public void Die()
-    {
-        if (isDead) return;
-        isDead = true;
-
-        if (animator != null)
-        {
-            animator.SetTrigger("Die");
-            animator.SetFloat("Speed", 0);
-        }
-
-        rb.velocity = Vector2.zero;
-        moveDir = Vector2.zero;
-        isStopped = true;
-        isAttacking = false;
-        StopAllCoroutines();
-
-        StartCoroutine(DieAndDestroyAfterAnimation());
-    }
+    
 
     IEnumerator DieAndDestroyAfterAnimation()
     {
