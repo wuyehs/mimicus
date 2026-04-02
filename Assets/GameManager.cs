@@ -13,13 +13,36 @@ public class GameManager : MonoBehaviour
     public bool debugMode = true;
     
     [Header("摄像机设置")]
-    [SerializeField] private float cameraSize = 5f;
+    [SerializeField] private float cameraSize = 5f;  // 图一二的相机大小
+    
+    [Header("图三专用相机设置")]
+    [Tooltip("Map_id=3时的相机大小（原始10f，缩小一半为5f）")]
+    [SerializeField] private float cameraSizeForMap3 = 5f;  // 原始10f → 5f（缩小一半）
+    
     [SerializeField] private Color backgroundColor = Color.black;
-
+    
     [Header("游戏设置")]
     public int Map_id = 1;
     public GameObject charPrefab;
     public int totalCharacters = 20;
+    
+    [Header("图三专用生成范围设置")]
+    [Tooltip("Map_id=3时的X轴范围（原始3.0f，缩小一半为1.5f）")]
+    [SerializeField] private float xRangeForMap3 = 1.5f;  // 原始3.0f → 1.5f
+    
+    [Tooltip("Map_id=3时的Y轴最大值（原始4.0f，缩小一半为2.0f）")]
+    [SerializeField] private float yMaxForMap3 = 2.0f;    // 原始4.0f → 2.0f
+    
+    [Tooltip("Map_id=3时的Y轴最小值（原始-4.0f，缩小一半为-2.0f）")]
+    [SerializeField] private float yMinForMap3 = -2.0f;   // 原始-4.0f → -2.0f
+    
+    [Header("图一二生成范围设置")]
+    [Tooltip("Map_id=1,2时的X轴范围")]
+    [SerializeField] private float xRangeForMap12 = 6.0f;
+    
+    [Header("Y轴范围（图一二）")]
+    [SerializeField] private float yMax = 4.0f;
+    [SerializeField] private float yMin = -4.0f;
     
     [Header("UI设置")]
     public TextMeshProUGUI winText;
@@ -31,7 +54,17 @@ public class GameManager : MonoBehaviour
         instance = this;
         mainCamera = Camera.main;
         mainCamera.orthographic = true;
-        mainCamera.orthographicSize = cameraSize;
+        
+        // 根据Map_id设置相机大小
+        if (Map_id == 3)
+        {
+            mainCamera.orthographicSize = cameraSizeForMap3;  // 缩小一半：5f
+        }
+        else
+        {
+            mainCamera.orthographicSize = cameraSize;  // 保持原来的5f
+        }
+        
         mainCamera.backgroundColor = backgroundColor;
         mainCamera.transform.position = new Vector3(0, 0, -10f);
     }
@@ -45,6 +78,7 @@ public class GameManager : MonoBehaviour
 
     void SpawnCharacters()
     {
+        // 使用统一的CharacterLogic类
         List<CharacterLogic> allChars = new List<CharacterLogic>();
         float minDistance = 1.5f; 
         int maxAttempts = 10;     
@@ -55,15 +89,30 @@ public class GameManager : MonoBehaviour
             bool isPosValid = false;
             int attempts = 0;
 
-            // 根据你的需求缩进的边界范围
-            float xRange = 6.0f; 
-            float yMax = 4.0f;   
-            float yMin = -4.0f;  
+            // 根据Map_id选择不同的生成范围
+            float currentXRange, currentYMax, currentYMin;
+            
+            if (Map_id == 3)
+            {
+                // 图三的生成范围（已缩小一半）
+                currentXRange = xRangeForMap3;  // 1.5f
+                currentYMax = yMaxForMap3;      // 2.0f
+                currentYMin = yMinForMap3;      // -2.0f
+            }
+            else
+            {
+                // 图一二的生成范围（保持不变）
+                currentXRange = xRangeForMap12; // 6.0f
+                currentYMax = yMax;             // 4.0f
+                currentYMin = yMin;             // -4.0f
+            }
 
             while (!isPosValid && attempts < maxAttempts)
             {
                 attempts++;
-                spawnPos = new Vector2(Random.Range(-xRange, xRange), Random.Range(yMin, yMax));
+                // 使用当前地图对应的生成范围
+                spawnPos = new Vector2(Random.Range(-currentXRange, currentXRange), Random.Range(currentYMin, currentYMax));
+                Debug.Log($"目前生成的地图ID: {Map_id}, 使用的X范围: {-currentXRange} to {currentXRange}, Y范围: {currentYMin} to {currentYMax}");
 
                 isPosValid = true;
                 foreach (var existingChar in allChars)
@@ -77,6 +126,8 @@ public class GameManager : MonoBehaviour
             }
 
             GameObject go = Instantiate(charPrefab, spawnPos, Quaternion.identity);
+            
+            // 使用统一的CharacterLogic类
             CharacterLogic logic = go.GetComponent<CharacterLogic>();
             if (logic != null)
             {
@@ -103,7 +154,7 @@ public class GameManager : MonoBehaviour
                     allChars[p2].GetComponent<SpriteRenderer>().color = Color.red;
             }
         }
-    } // 这里才是 SpawnCharacters 的正确结尾
+    }
 
     void Update()
     {
