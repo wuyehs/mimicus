@@ -182,7 +182,9 @@ MonoBehaviour:
   currentTool: 3
   shootOffset: {x: 0.8, y: 0}
   shootRange: 10
-  bombRadius: 2
+  bombRadius: 3
+  bombCountdown: 5
+  bombCountdownUI: {fileID: 2839267013968412253, guid: 81672d6b8de59714e9a1ae0efae6ebf2, type: 3}
   moveSpeed: 3.5
   smoothSpeed: 10
   attackRange: 1.5
