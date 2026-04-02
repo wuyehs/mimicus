@@ -9,6 +9,8 @@ public class VictoryUI : MonoBehaviour
     public void BackToMenu()
     {
         Time.timeScale = 1f;
+        PlayerPrefs.SetInt("SkipIntroOnce", 1);
+        PlayerPrefs.Save();
         SceneManager.LoadScene(menuSceneName);
     }
 
