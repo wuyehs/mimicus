@@ -8,11 +8,11 @@ public class CharacterLogic : MonoBehaviour
 
     public bool debugMode = false;
 
-    public enum WeaponType { Melee, Gun, Bomb}
-    public WeaponType currentWeapon = WeaponType.Melee;   // 当前武器
+    public enum ToolType {Smoke, Gun, Bomb, None}
+    public ToolType currentTool = ToolType.None;   // 当前工具
     public Vector2 shootOffset = new Vector2(0.4f, 0f);  // 枪口偏移
     public float shootRange = 10f;   
-    public float bombRadius = 2f;     
+    public float bombRadius = 3f;     
     
     [Header("移动设置")]
     public float moveSpeed = 2f;
@@ -48,7 +48,6 @@ public class CharacterLogic : MonoBehaviour
 
     // ===== 烟雾弹系统 =====
     [Header("烟雾弹设置")]
-    private bool hasSmokeEffect = false;               // 是否拥有烟雾弹效果
     public GameObject smokeEffectPrefab;               // 烟雾特效预制体（在Inspector中拖入）
     
     private Camera mainCamera;
@@ -117,17 +116,17 @@ public class CharacterLogic : MonoBehaviour
     
     public void PickUpGun()
     {
-        currentWeapon = WeaponType.Gun;
+        currentTool = ToolType.Gun;
     }
     public void PickUpBomb()
     {
-        currentWeapon = WeaponType.Bomb;
+        currentTool = ToolType.Bomb;
     }
 
     // ===== 烟雾弹拾取方法 =====
     public void PickUpSmokeGrenade()
     {
-        hasSmokeEffect = true;
+        currentTool = ToolType.Smoke;
         // 可选：播放拾取音效，显示UI提示
     }
 
@@ -231,6 +230,7 @@ public class CharacterLogic : MonoBehaviour
         ProcessInput(rawInput.x, rawInput.y);
 
         if (Input.GetKeyDown(KeyCode.F) && CanAttack()) Attack();
+        if (Input.GetKeyDown(KeyCode.G) && currentTool != ToolType.None) UseTool();
     }
 
     void HandleP2()
@@ -244,6 +244,7 @@ public class CharacterLogic : MonoBehaviour
         ProcessInput(rawInput.x, rawInput.y);
 
         if ((Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Alpha0)) && CanAttack()) Attack();
+        if (Input.GetKeyDown(KeyCode.Minus) && currentTool != ToolType.None)UseTool();
     }
 
     void ProcessInput(float x, float y)
@@ -267,14 +268,11 @@ public class CharacterLogic : MonoBehaviour
     {
         return Time.time - lastAttackTime >= attackCooldown && !isAttacking && !isDead;
     }
-
-     void Attack()
+    
+    void UseTool()
     {
-        if (isDead || isAttacking) return;
-
-        if (currentWeapon == WeaponType.Gun)
+        if (currentTool == ToolType.Gun)
         {
-            // ==================== 枪械射击 ====================
             Vector2 shootDir = lastMoveDir.normalized;
             if (shootDir == Vector2.zero) shootDir = Vector2.right;
             
@@ -288,29 +286,11 @@ public class CharacterLogic : MonoBehaviour
             Collider2D[] hitColliders = System.Array.ConvertAll(hits, h => h.collider);
 
             ProcessHitTargets(hitColliders);
-            
-            currentWeapon = WeaponType.Melee;
         }
-        else if (currentWeapon == WeaponType.Bomb)
+        else if (currentTool == ToolType.Bomb)
         {
-            // ==================== 炸弹攻击 ====================
-            lastAttackTime = Time.time;
-
-            if (animator != null)
-                animator.SetTrigger("Attack");
-
-            isAttacking = true;
-            moveDir = Vector2.zero;
-            isStopped = true;
-
-            StartCoroutine(WaitForAttackEnd());
-            if (spriteRenderer != null)
-                StartCoroutine(AttackFlash());
-
-            // 播放爆炸特效
             PlayExplosionAtPosition(transform.position + Vector3.up * 1f);
-            
-            // 检测爆炸范围内的所有人物
+
             Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position + Vector3.up * 1f, bombRadius);
             
             foreach (Collider2D hit in hitColliders)
@@ -330,49 +310,52 @@ public class CharacterLogic : MonoBehaviour
                         GameManager.instance.EndGame("玩家一（蓝）获胜！");
                 }
             }
-            
-            // 炸弹使用后变回近战武器
-            currentWeapon = WeaponType.Melee;
         }
-        else
+        else if (currentTool == ToolType.Smoke)
         {
-            // ==================== 近战攻击 ====================
-            lastAttackTime = Time.time;
-
-            if (animator != null)
-                animator.SetTrigger("Attack");
-
-            isAttacking = true;
-            moveDir = Vector2.zero;
-            isStopped = true;
-
-            StartCoroutine(WaitForAttackEnd());
-            if (spriteRenderer != null)
-                StartCoroutine(AttackFlash());
-
-            Vector2 attackDir = lastMoveDir.normalized;
-            if (attackDir == Vector2.zero) attackDir = Vector2.right;
-            
-            float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
-
-            // 长度（朝攻击方向）加大，宽度适当
-            Vector2 boxSize = new Vector2(1.5f, 1.35f);   // 第一个值是攻击方向长度，第二个是左右宽度
-            Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;
-            hitBoxCenter.y += 1f;
-
-            Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
-            
-            // 可选：画出盒子的四个角（更直观）
-            Vector2 right = new Vector2(-attackDir.y, attackDir.x); // 垂直向量
-            Vector2 halfSize = boxSize * 0.5f;
-            
-            Vector2 p1 = hitBoxCenter + attackDir * halfSize.x + right * halfSize.y;
-            Vector2 p2 = hitBoxCenter + attackDir * halfSize.x - right * halfSize.y;
-            Vector2 p3 = hitBoxCenter - attackDir * halfSize.x - right * halfSize.y;
-            Vector2 p4 = hitBoxCenter - attackDir * halfSize.x + right * halfSize.y;
-
-            ProcessHitTargets(hitColliders);
+            GameObject smoke = Instantiate(smokeEffectPrefab, transform.position + Vector3.up * 1f, Quaternion.identity);     
         }
+        currentTool = ToolType.None; // 使用后重置为无工具
+    }
+
+     void Attack()
+    {
+        if (isDead || isAttacking) return;        
+        lastAttackTime = Time.time;
+
+        if (animator != null)
+            animator.SetTrigger("Attack");
+
+        isAttacking = true;
+        moveDir = Vector2.zero;
+        isStopped = true;
+
+        StartCoroutine(WaitForAttackEnd());
+        if (spriteRenderer != null)
+            StartCoroutine(AttackFlash());
+
+        Vector2 attackDir = lastMoveDir.normalized;
+        if (attackDir == Vector2.zero) attackDir = Vector2.right;
+        
+        float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
+
+        // 长度（朝攻击方向）加大，宽度适当
+        Vector2 boxSize = new Vector2(1.5f, 1.35f);   // 第一个值是攻击方向长度，第二个是左右宽度
+        Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;
+        hitBoxCenter.y += 1f;
+
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
+        
+        // 可选：画出盒子的四个角（更直观）
+        Vector2 right = new Vector2(-attackDir.y, attackDir.x); // 垂直向量
+        Vector2 halfSize = boxSize * 0.5f;
+        
+        Vector2 p1 = hitBoxCenter + attackDir * halfSize.x + right * halfSize.y;
+        Vector2 p2 = hitBoxCenter + attackDir * halfSize.x - right * halfSize.y;
+        Vector2 p3 = hitBoxCenter - attackDir * halfSize.x - right * halfSize.y;
+        Vector2 p4 = hitBoxCenter - attackDir * halfSize.x + right * halfSize.y;
+
+        ProcessHitTargets(hitColliders);
     }
 
     // ========== 公共目标处理 ==========
@@ -402,15 +385,7 @@ public class CharacterLogic : MonoBehaviour
 
         if (bestTarget != null)
         {
-            // ===== 烟雾弹效果：如果拥有，则在目标位置生成烟雾特效并消耗效果 =====
-            if (hasSmokeEffect && smokeEffectPrefab != null)
-            {
-                GameObject smoke = Instantiate(smokeEffectPrefab, bestTarget.transform.position + Vector3.up * 1f, Quaternion.identity);
-                hasSmokeEffect = false;
-            }
-
             bestTarget.Die();
-
             if (bestTarget.currentRole == Role.Player1)
                 GameManager.instance.EndGame("玩家二（红）获胜！");
             else if (bestTarget.currentRole == Role.Player2)
