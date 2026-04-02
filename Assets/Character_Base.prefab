@@ -60,7 +60,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 18dac340ea4a055479addee998d3b628, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -179,7 +179,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentRole: 0
   debugMode: 1
-  currentWeapon: 0
+  currentTool: 3
   shootOffset: {x: 0.8, y: 0}
   shootRange: 10
   bombRadius: 2

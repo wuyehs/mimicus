@@ -7,11 +7,49 @@ public class VolcanoLavaController : MonoBehaviour
     public float minScale = 0.1f;       // 最小缩到多小
     
     [Tooltip("基础半径缩放系数。在 Scene 窗口观察蓝色椭圆并调整此值。")]
-    public float baseRadius = 0.2f;     //
+    public float baseRadius = 0.4f;     //
 
     [Header("偏差修正")]
     [Tooltip("如果蓝线对准了但死得不对，调整这个。向上移 2 个单位就填 (0, 2)")]
     public Vector2 centerOffset = Vector2.zero; // 新增：用于对齐视觉与逻辑的偏差
+    
+    [Header("遮罩设置")]
+    [Tooltip("背景精灵对象，需要在Inspector中拖拽赋值")]
+    public SpriteRenderer backgroundSprite;
+    
+    private SpriteMask spriteMask;
+
+    void Start()
+    {
+        // 获取SpriteMask组件
+        spriteMask = gameObject.GetComponent<SpriteMask>();
+        if (spriteMask == null)
+        {
+            Debug.LogError("没有找到SpriteMask组件！");
+            return;
+        }
+
+        // 启用自定义层级范围
+        spriteMask.isCustomRangeActive = true;
+        spriteMask.frontSortingOrder = -9;   // 前向边界
+        spriteMask.backSortingOrder = -11;   // 后向边界
+        
+        // 检查背景精灵
+        if (backgroundSprite != null)
+        {
+            // 设置背景精灵的层级
+            backgroundSprite.sortingOrder = -10;  // 在-11到-9之间
+            
+            // 设置遮罩交互
+            backgroundSprite.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+            
+            Debug.Log("背景遮罩设置完成");
+        }
+        else
+        {
+            Debug.LogWarning("backgroundSprite未赋值，请在Inspector中拖拽背景对象");
+        }
+    }
 
     void Update()
     {
@@ -29,22 +67,22 @@ public class VolcanoLavaController : MonoBehaviour
 
     void CheckAllCharacters()
     {
-        // 寻找 CharacterLogic2 组件
-        CharacterLogic2[] allCharacters = Object.FindObjectsByType<CharacterLogic2>(FindObjectsSortMode.None);
+        // 修改点：从 CharacterLogic2 改为 CharacterLogic
+        CharacterLogic[] allCharacters = Object.FindObjectsByType<CharacterLogic>(FindObjectsSortMode.None);
         
         // 计算椭圆的长轴 (a) 和短轴 (b)
         float axisX = transform.localScale.x * baseRadius;
         float axisY = transform.localScale.y * baseRadius;
 
         // 应用中心点偏移
-        Vector2 visualCenter = (Vector2)transform.position + centerOffset;
+        Vector2 visualCenter = (Vector2)transform.position;
 
-        foreach (CharacterLogic2 character in allCharacters)
+        foreach (CharacterLogic character in allCharacters)
         {
             if (character == null) continue;
 
             // 使用偏移后的中心计算角色相对位置
-            Vector2 relativePos = (Vector2)character.transform.position - visualCenter;
+            Vector2 relativePos = (Vector2)character.transform.position + Vector2.up * 1f - visualCenter;
 
             // 确保轴不为 0 防止计算错误
             if (axisX <= 0 || axisY <= 0) continue;
@@ -61,21 +99,22 @@ public class VolcanoLavaController : MonoBehaviour
         }
     }
 
-    void HandleInstantDeath(CharacterLogic2 victim)
+    void HandleInstantDeath(CharacterLogic victim)
     {
-        // 调用 CharacterLogic2 的死亡逻辑
+        // 修改点：调用 CharacterLogic 的死亡逻辑
         victim.Die(); 
 
-        // 判定胜负逻辑并通知 GameManager2
-        if (victim.currentRole == CharacterLogic2.Role.Player1)
+        // 修改点：判定胜负逻辑并通知对应的GameManager
+        if (GameManager.instance != null)
         {
-            if (GameManager2.instance != null)
-                GameManager2.instance.EndGame("玩家一掉入岩浆！玩家二（红）获胜！"); 
-        }
-        else if (victim.currentRole == CharacterLogic2.Role.Player2)
-        {
-            if (GameManager2.instance != null)
-                GameManager2.instance.EndGame("玩家二掉入岩浆！玩家一（蓝）获胜！"); 
+            if (victim.currentRole == CharacterLogic.Role.Player1)
+            {
+                GameManager.instance.EndGame("玩家一掉入岩浆！玩家二（红）获胜！"); 
+            }
+            else if (victim.currentRole == CharacterLogic.Role.Player2)
+            {
+                GameManager.instance.EndGame("玩家二掉入岩浆！玩家一（蓝）获胜！"); 
+            }
         }
     }
 

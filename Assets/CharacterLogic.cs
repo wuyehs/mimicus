@@ -8,11 +8,14 @@ public class CharacterLogic : MonoBehaviour
 
     public bool debugMode = false;
 
-    public enum WeaponType { Melee, Gun, Bomb}
-    public WeaponType currentWeapon = WeaponType.Melee;   // 当前武器
-    public Vector2 shootOffset = new Vector2(0.4f, 0f);  // 枪口偏移
-    public float shootRange = 10f;   
-    public float bombRadius = 2f;     
+    // 统一的武器/工具系统
+    [Header("工具系统")]
+    public ToolType currentTool = ToolType.None;
+    public enum ToolType { Smoke, Gun, Bomb, None }
+    
+    public Vector2 shootOffset = new Vector2(0.4f, 0f);
+    public float shootRange = 10f;       
+    public float bombRadius = 3f;     
     
     [Header("移动设置")]
     public float moveSpeed = 2f;
@@ -29,7 +32,6 @@ public class CharacterLogic : MonoBehaviour
     private float lastAttackTime = 0f;
     private SpriteRenderer spriteRenderer;
     
-    // 默认颜色（非调试模式使用）
     private static readonly Color defaultColor = Color.white;
 
     // ===== 动画控制 =====
@@ -38,18 +40,12 @@ public class CharacterLogic : MonoBehaviour
     private bool isDead = false;
     private float attackAnimLength = 0.5f;
 
-    // 碰撞盒引用
     private Collider2D characterCollider;
     
-    // 传送动画预制体
-    [Header("测试特效")]
-    public GameObject teleportEffectPrefab;  // 在Inspector中拖入teleport预制体
+    [Header("特效预制体")]
+    public GameObject teleportEffectPrefab;
     public GameObject explosionEffectPrefab; 
-
-    // ===== 烟雾弹系统 =====
-    [Header("烟雾弹设置")]
-    private bool hasSmokeEffect = false;               // 是否拥有烟雾弹效果
-    public GameObject smokeEffectPrefab;               // 烟雾特效预制体（在Inspector中拖入）
+    public GameObject smokeEffectPrefab;
     
     private Camera mainCamera;
     private float leftBound, rightBound, topBound, bottomBound;
@@ -78,7 +74,6 @@ public class CharacterLogic : MonoBehaviour
         
         if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
 
-        // 获取攻击动画时长
         if (animator != null && animator.runtimeAnimatorController != null)
         {
             AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
@@ -91,7 +86,6 @@ public class CharacterLogic : MonoBehaviour
                 }
             }
         }
-        
     }
 
     void Update()
@@ -117,26 +111,23 @@ public class CharacterLogic : MonoBehaviour
     
     public void PickUpGun()
     {
-        currentWeapon = WeaponType.Gun;
+        currentTool = ToolType.Gun;
     }
+    
     public void PickUpBomb()
     {
-        currentWeapon = WeaponType.Bomb;
+        currentTool = ToolType.Bomb;
     }
 
-    // ===== 烟雾弹拾取方法 =====
     public void PickUpSmokeGrenade()
     {
-        hasSmokeEffect = true;
-        // 可选：播放拾取音效，显示UI提示
+        currentTool = ToolType.Smoke;
     }
 
-    // 获取动画方向
     private Vector2 GetAnimationDirection(Vector2 inputDir)
     {
         if (inputDir.magnitude < 0.1f) return Vector2.right;
         
-        // 判断是否为纯下方向移动
         float horizontalThreshold = 0.2f;
         
         if (inputDir.y < 0)
@@ -179,46 +170,47 @@ public class CharacterLogic : MonoBehaviour
     {
         float size = mainCamera.orthographicSize;
         float aspect = mainCamera.aspect;
+        
         float leftOffset = 1.5f;
         float rightOffset = 1f;
-        float topOffset = 2.5f;        // 上边界缩回的距离（缩得多一些）
-        float bottomOffset =-0.3f;  
-    if (GameManager.instance.Map_id == 2)
+        float topOffset = 2.5f;
+        float bottomOffset = -0.3f;
+        
+        if (GameManager.instance != null && GameManager.instance.Map_id == 2)
+        {
+            leftOffset = 1.4f;
+            rightOffset = 2.8f;
+            topOffset = 3f;
+            bottomOffset = 1.4f;
+        }
+
+        rightBound = size * aspect - rightOffset;
+        leftBound = -(size * aspect - leftOffset);
+        
+        topBound = size - topOffset;
+        bottomBound = -(size - bottomOffset);
+    }
+
+    private void LimitToScreen()
     {
-        leftOffset = 1.4f;
-        rightOffset = 2.8f; // 左右边界缩回的距离（原为 0.5f）
-        topOffset = 3f;        // 上边界缩回的距离（缩得多一些）
-        bottomOffset =1.4f; 
+        if (mainCamera == null) return;
+        Vector2 pos = rb.position;
+        Vector2 vel = rb.velocity;
+        bool changed = false;
+
+        if (pos.x < leftBound) { pos.x = leftBound; vel.x = 0; changed = true; }
+        else if (pos.x > rightBound) { pos.x = rightBound; vel.x = 0; changed = true; }
+        
+        if (pos.y < bottomBound) { pos.y = bottomBound; vel.y = 0; changed = true; }
+        else if (pos.y > topBound) { pos.y = topBound; vel.y = 0; changed = true; }
+
+        if (changed)
+        {
+            rb.position = pos;
+            rb.velocity = vel;
+            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
+        }
     }
-
-    rightBound = size * aspect - rightOffset;
-    leftBound = -(size * aspect - leftOffset);
-    
-    topBound = size - topOffset;
-    bottomBound = -(size - bottomOffset); 
-    // --- 修改结束 ---
-    }
-
-   private void LimitToScreen()
-{
-    if (mainCamera == null) return;
-    Vector2 pos = rb.position;
-    Vector2 vel = rb.velocity; // 获取速度
-    bool changed = false;
-
-    if (pos.x < leftBound) { pos.x = leftBound; vel.x = 0; changed = true; }
-    else if (pos.x > rightBound) { pos.x = rightBound; vel.x = 0; changed = true; }
-    
-    if (pos.y < bottomBound) { pos.y = bottomBound; vel.y = 0; changed = true; }
-    else if (pos.y > topBound) { pos.y = topBound; vel.y = 0; changed = true; }
-
-    if (changed)
-    {
-        rb.position = pos; // 修正坐标
-        rb.velocity = vel; // 关键：撞墙瞬间必须杀掉速度，防止抖动
-        if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
-    }
-}
 
     void HandleP1()
     {
@@ -231,6 +223,7 @@ public class CharacterLogic : MonoBehaviour
         ProcessInput(rawInput.x, rawInput.y);
 
         if (Input.GetKeyDown(KeyCode.F) && CanAttack()) Attack();
+        if (Input.GetKeyDown(KeyCode.G) && currentTool != ToolType.None) UseTool();
     }
 
     void HandleP2()
@@ -244,6 +237,7 @@ public class CharacterLogic : MonoBehaviour
         ProcessInput(rawInput.x, rawInput.y);
 
         if ((Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Alpha0)) && CanAttack()) Attack();
+        if (Input.GetKeyDown(KeyCode.Minus) && currentTool != ToolType.None) UseTool();
     }
 
     void ProcessInput(float x, float y)
@@ -267,14 +261,11 @@ public class CharacterLogic : MonoBehaviour
     {
         return Time.time - lastAttackTime >= attackCooldown && !isAttacking && !isDead;
     }
-
-     void Attack()
+    
+    void UseTool()
     {
-        if (isDead || isAttacking) return;
-
-        if (currentWeapon == WeaponType.Gun)
+        if (currentTool == ToolType.Gun)
         {
-            // ==================== 枪械射击 ====================
             Vector2 shootDir = lastMoveDir.normalized;
             if (shootDir == Vector2.zero) shootDir = Vector2.right;
             
@@ -286,31 +277,11 @@ public class CharacterLogic : MonoBehaviour
             Debug.DrawRay(origin, shootDir * shootRange, Color.red, 0.8f);
 
             Collider2D[] hitColliders = System.Array.ConvertAll(hits, h => h.collider);
-
             ProcessHitTargets(hitColliders);
-            
-            currentWeapon = WeaponType.Melee;
         }
-        else if (currentWeapon == WeaponType.Bomb)
+        else if (currentTool == ToolType.Bomb)
         {
-            // ==================== 炸弹攻击 ====================
-            lastAttackTime = Time.time;
-
-            if (animator != null)
-                animator.SetTrigger("Attack");
-
-            isAttacking = true;
-            moveDir = Vector2.zero;
-            isStopped = true;
-
-            StartCoroutine(WaitForAttackEnd());
-            if (spriteRenderer != null)
-                StartCoroutine(AttackFlash());
-
-            // 播放爆炸特效
             PlayExplosionAtPosition(transform.position + Vector3.up * 1f);
-            
-            // 检测爆炸范围内的所有人物
             Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position + Vector3.up * 1f, bombRadius);
             
             foreach (Collider2D hit in hitColliders)
@@ -320,62 +291,52 @@ public class CharacterLogic : MonoBehaviour
                 CharacterLogic target = hit.GetComponent<CharacterLogic>();
                 if (target != null && !target.isDead)
                 {
-                    // 杀死范围内的所有人物
                     target.Die();
                     
-                    // 检查是否有玩家死亡，触发游戏结束
                     if (target.currentRole == Role.Player1)
                         GameManager.instance.EndGame("玩家二（红）获胜！");
                     else if (target.currentRole == Role.Player2)
                         GameManager.instance.EndGame("玩家一（蓝）获胜！");
                 }
             }
-            
-            // 炸弹使用后变回近战武器
-            currentWeapon = WeaponType.Melee;
         }
-        else
+        else if (currentTool == ToolType.Smoke)
         {
-            // ==================== 近战攻击 ====================
-            lastAttackTime = Time.time;
-
-            if (animator != null)
-                animator.SetTrigger("Attack");
-
-            isAttacking = true;
-            moveDir = Vector2.zero;
-            isStopped = true;
-
-            StartCoroutine(WaitForAttackEnd());
-            if (spriteRenderer != null)
-                StartCoroutine(AttackFlash());
-
-            Vector2 attackDir = lastMoveDir.normalized;
-            if (attackDir == Vector2.zero) attackDir = Vector2.right;
-            
-            float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
-
-            // 长度（朝攻击方向）加大，宽度适当
-            Vector2 boxSize = new Vector2(1.5f, 1.35f);   // 第一个值是攻击方向长度，第二个是左右宽度
-            Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;
-            hitBoxCenter.y += 1f;
-
-            Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
-            
-            // 可选：画出盒子的四个角（更直观）
-            Vector2 right = new Vector2(-attackDir.y, attackDir.x); // 垂直向量
-            Vector2 halfSize = boxSize * 0.5f;
-            
-            Vector2 p1 = hitBoxCenter + attackDir * halfSize.x + right * halfSize.y;
-            Vector2 p2 = hitBoxCenter + attackDir * halfSize.x - right * halfSize.y;
-            Vector2 p3 = hitBoxCenter - attackDir * halfSize.x - right * halfSize.y;
-            Vector2 p4 = hitBoxCenter - attackDir * halfSize.x + right * halfSize.y;
-
-            ProcessHitTargets(hitColliders);
+            Instantiate(smokeEffectPrefab, transform.position + Vector3.up * 1f, Quaternion.identity);
         }
+        
+        currentTool = ToolType.None;
     }
 
-    // ========== 公共目标处理 ==========
+    void Attack()
+    {
+        if (isDead || isAttacking) return;        
+        lastAttackTime = Time.time;
+
+        if (animator != null)
+            animator.SetTrigger("Attack");
+
+        isAttacking = true;
+        moveDir = Vector2.zero;
+        isStopped = true;
+
+        StartCoroutine(WaitForAttackEnd());
+        if (spriteRenderer != null)
+            StartCoroutine(AttackFlash());
+
+        Vector2 attackDir = lastMoveDir.normalized;
+        if (attackDir == Vector2.zero) attackDir = Vector2.right;
+        
+        float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
+
+        Vector2 boxSize = new Vector2(1.5f, 1.35f);
+        Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;
+        hitBoxCenter.y += 1f;
+
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
+        ProcessHitTargets(hitColliders);
+    }
+
     private void ProcessHitTargets(Collider2D[] hits)
     {
         CharacterLogic bestTarget = null;
@@ -402,15 +363,7 @@ public class CharacterLogic : MonoBehaviour
 
         if (bestTarget != null)
         {
-            // ===== 烟雾弹效果：如果拥有，则在目标位置生成烟雾特效并消耗效果 =====
-            if (hasSmokeEffect && smokeEffectPrefab != null)
-            {
-                GameObject smoke = Instantiate(smokeEffectPrefab, bestTarget.transform.position + Vector3.up * 1f, Quaternion.identity);
-                hasSmokeEffect = false;
-            }
-
             bestTarget.Die();
-
             if (bestTarget.currentRole == Role.Player1)
                 GameManager.instance.EndGame("玩家二（红）获胜！");
             else if (bestTarget.currentRole == Role.Player2)
@@ -455,7 +408,6 @@ public class CharacterLogic : MonoBehaviour
     {
         if (spriteRenderer != null)
         {
-            // 在非调试模式下，闪光效果可能不太明显
             Color flashColor = debugMode ? Color.yellow : new Color(1f, 1f, 0.8f, 1f);
             spriteRenderer.color = flashColor;
             yield return new WaitForSeconds(0.1f);
@@ -474,14 +426,14 @@ public class CharacterLogic : MonoBehaviour
 
             if (!isAttacking)
             {
-                int behavior = Random.Range(0, 10);
+                int behavior = Random.Range(0, 3);
                 if (behavior != 0)
                 {
                     float angle = Random.Range(0f, 360f);
                     moveDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
                     lastMoveDir = moveDir;
                     isStopped = false;
-                    float moveTime = Random.Range(0.5f, 2f);
+                    float moveTime = Random.Range(0.3f, 1f);
                     yield return new WaitForSeconds(moveTime);
                 }
                 else
@@ -506,67 +458,37 @@ public class CharacterLogic : MonoBehaviour
             isStopped = true;
             moveDir = Vector2.zero;
             
-            // === 新增代码：当Map_id是2且两个Bot相撞时 ===
             CheckBotCollision(collision.gameObject);
         }
     }
     
-    // === 新增方法：检测Bot与Bot的碰撞 ===
     private void CheckBotCollision(GameObject otherObject)
     {
-        // 检查GameManager是否存在且Map_id为2
         if (GameManager.instance == null || GameManager.instance.Map_id != 2)
             return;
             
-        // 检查两个对象是否都是Bot
         CharacterLogic otherCharacter = otherObject.GetComponent<CharacterLogic>();
         if (otherCharacter == null) return;
         
-        // 确保两个都是Bot角色且都不是玩家
         if (currentRole == Role.Bot && otherCharacter.currentRole == Role.Bot)
         {
-            // 50%概率触发
             if (Random.Range(0f, 1f) <= 0.05f)
             {
-                // 防止重复触发
                 if (!isDead && !otherCharacter.isDead)
                 {
-                    // 在两个机器人上方分别创建teleport动画
                     PlayTeleportAtPosition(transform.position, 1.5f);
                     otherCharacter.PlayTeleportAtPosition(otherCharacter.transform.position, 1.5f);
                     
-                    // 让两个Bot都消失
                     StartCoroutine(DelayedDestroyBoth(otherCharacter));
                 }
             }
         }
     }
     
-    private void PlayExplosionAtPosition(Vector3 position)
-    {
-        if (explosionEffectPrefab == null)
-        {
-            Debug.LogWarning("Explosion effect prefab is not assigned!");
-            return;
-        }
-        
-        // 创建爆炸特效
-        GameObject explosion = Instantiate(explosionEffectPrefab, position, Quaternion.identity);
-        
-        // 检查并设置SpriteRenderer
-        SpriteRenderer explosionRenderer = explosion.GetComponent<SpriteRenderer>();
-        if (explosionRenderer != null)
-        {
-            explosionRenderer.sortingOrder = 99; // 略低于传送特效
-        }
-        explosion.transform.localScale = new Vector3(bombRadius * 0.7f, bombRadius * 0.7f, 1f);
-    }
     private IEnumerator DelayedDestroyBoth(CharacterLogic otherBot)
     {
-        // 短暂延迟，确保视觉效果
         yield return new WaitForSeconds(0.05f);
         
-        // 销毁当前对象
         if (!isDead)
         {
             isDead = true;
@@ -578,7 +500,6 @@ public class CharacterLogic : MonoBehaviour
             isAttacking = false;
         }
         
-        // 销毁另一个Bot
         if (!otherBot.isDead)
         {
             otherBot.isDead = true;
@@ -590,31 +511,37 @@ public class CharacterLogic : MonoBehaviour
             otherBot.isAttacking = false;
         }
         
-        // 等待死亡动画（如果有的话）
         yield return new WaitForSeconds(0.5f);
         
-        // 销毁两个游戏对象
         Destroy(gameObject);
         Destroy(otherBot.gameObject);
     }
     
-    // === 新增方法：在指定位置上方播放teleport动画 ===
+    private void PlayExplosionAtPosition(Vector3 position)
+    {
+        if (explosionEffectPrefab == null) return;
+        
+        GameObject explosion = Instantiate(explosionEffectPrefab, position, Quaternion.identity);
+        
+        SpriteRenderer explosionRenderer = explosion.GetComponent<SpriteRenderer>();
+        if (explosionRenderer != null)
+        {
+            explosionRenderer.sortingOrder = 99;
+        }
+        explosion.transform.localScale = new Vector3(bombRadius * 0.7f, bombRadius * 0.7f, 1f);
+    }
+    
     public void PlayTeleportAtPosition(Vector3 position, float yOffset = 1.5f)
     {   
-        // 计算特效位置（机器人正上方）
-        Vector3 effectPosition = new Vector3(position.x, position.y + yOffset, position.z);
+        if (teleportEffectPrefab == null) return;
         
-        // 创建特效
+        Vector3 effectPosition = new Vector3(position.x, position.y + yOffset, position.z);
         GameObject effect = Instantiate(teleportEffectPrefab, effectPosition, Quaternion.identity);
         
-        // 检查并设置SpriteRenderer
         SpriteRenderer effectRenderer = effect.GetComponent<SpriteRenderer>();
         if (effectRenderer != null)
         {
-            effectRenderer.sortingOrder = 100; // 设置高排序层级
+            effectRenderer.sortingOrder = 100;
         }
-        
-        // 检查Animator
-        Animator effectAnimator = effect.GetComponent<Animator>();
     }
 }
