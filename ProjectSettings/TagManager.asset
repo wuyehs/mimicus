@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - Boundary
+  - Pickup
   layers:
   - Default
   - TransparentFX
@@ -44,4 +45,7 @@ TagManager:
     locked: 0
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Smoke
+    uniqueID: 120827159
     locked: 0

@@ -60,7 +60,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 18dac340ea4a055479addee998d3b628, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -163,7 +163,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.6045048, y: 0.8580899}
+  m_Size: {x: 0.3125, y: 0.4685}
   m_EdgeRadius: 0
 --- !u!114 &5896812537794254247
 MonoBehaviour:
@@ -178,14 +178,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentRole: 0
-  debugMode: 0
-  currentWeapon: 0
+  debugMode: 1
+  currentTool: 3
   shootOffset: {x: 0.8, y: 0}
   shootRange: 10
+  bombRadius: 3
+  bombCountdown: 5
+  bombCountdownUI: {fileID: 2839267013968412253, guid: 81672d6b8de59714e9a1ae0efae6ebf2, type: 3}
   moveSpeed: 3.5
   smoothSpeed: 10
   attackRange: 1.5
   attackCooldown: 5
+  teleportEffectPrefab: {fileID: 5435274715019816631, guid: 513cfb3a1eddbc549a956f9917a035f0, type: 3}
+  explosionEffectPrefab: {fileID: 6597782370894767191, guid: bda760e905437ac458dad09f009430ca, type: 3}
+  smokeEffectPrefab: {fileID: 4074625632213861057, guid: 2e42e198c44f3ed4aa6492f3c3dcb94a, type: 3}
 --- !u!95 &533247761865982454
 Animator:
   serializedVersion: 6

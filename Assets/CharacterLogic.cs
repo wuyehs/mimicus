@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
+using TMPro;
 
 public class CharacterLogic : MonoBehaviour
 {
@@ -8,10 +10,18 @@ public class CharacterLogic : MonoBehaviour
 
     public bool debugMode = false;
 
-    public enum WeaponType { Melee, Gun }
-    public WeaponType currentWeapon = WeaponType.Melee;   // 当前武器
-    public Vector2 shootOffset = new Vector2(0.4f, 0f);  // 枪口偏移
+    // 统一的武器/工具系统
+    [Header("工具系统")]
+    public ToolType currentTool = ToolType.None;
+    public enum ToolType { Smoke, Gun, Bomb, None }
+    
+    public Vector2 shootOffset = new Vector2(0.4f, 0f);
     public float shootRange = 10f;       
+    public float bombRadius = 3f;     
+    public float bombCountdown = 3f;  // 新增：炸弹倒计时时长
+    
+    [Header("炸弹倒计时UI")]
+    public GameObject bombCountdownUI;  // 倒计时UI预制体
     
     [Header("移动设置")]
     public float moveSpeed = 2f;
@@ -28,7 +38,6 @@ public class CharacterLogic : MonoBehaviour
     private float lastAttackTime = 0f;
     private SpriteRenderer spriteRenderer;
     
-    // 新增：默认颜色（非调试模式使用）
     private static readonly Color defaultColor = Color.white;
 
     // ===== 动画控制 =====
@@ -36,12 +45,23 @@ public class CharacterLogic : MonoBehaviour
     private bool isAttacking = false;
     private bool isDead = false;
     private float attackAnimLength = 0.5f;
+    
+    // 新增：炸弹相关变量
+    private float bombTimer = 0f;
+    private bool bombActive = false;
+    private GameObject bombUIInstance = null;
+    private TextMeshProUGUI bombText = null;
 
-    // 新增：碰撞盒引用
     private Collider2D characterCollider;
+    
+    [Header("特效预制体")]
+    public GameObject teleportEffectPrefab;
+    public GameObject explosionEffectPrefab; 
+    public GameObject smokeEffectPrefab;
     
     private Camera mainCamera;
     private float leftBound, rightBound, topBound, bottomBound;
+    private bool bombAnimation = false;
 
     void Awake()
     {
@@ -51,6 +71,11 @@ public class CharacterLogic : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         characterCollider = GetComponent<Collider2D>();
+        BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
+        if (boxCollider != null)
+        {
+            boxCollider.size = new Vector2(0.3125f, 0.46875f);
+        }
     }
 
     void Start()
@@ -62,7 +87,6 @@ public class CharacterLogic : MonoBehaviour
         
         if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
 
-        // 获取攻击动画时长
         if (animator != null && animator.runtimeAnimatorController != null)
         {
             AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
@@ -81,6 +105,21 @@ public class CharacterLogic : MonoBehaviour
     {
         if (isDead) return;
         
+        // 新增：炸弹倒计时更新
+        if (bombActive)
+        {
+            bombTimer -= Time.deltaTime;
+            UpdateBombUI();
+            if(bombTimer <= 0.6f && bombAnimation)
+            {
+                bombAnimation = false;
+                PlayExplosionAtPosition(transform.position + Vector3.up * 1f);
+            }
+            if (bombTimer <= 0f)
+            {
+                ExplodeBomb();
+            }
+        }
 
         if (animator != null)
         {
@@ -101,15 +140,23 @@ public class CharacterLogic : MonoBehaviour
     
     public void PickUpGun()
     {
-        currentWeapon = WeaponType.Gun;
+        currentTool = ToolType.Gun;
     }
-    // 修改：获取动画方向
+    
+    public void PickUpBomb()
+    {
+        currentTool = ToolType.Bomb;
+    }
+
+    public void PickUpSmokeGrenade()
+    {
+        currentTool = ToolType.Smoke;
+    }
 
     private Vector2 GetAnimationDirection(Vector2 inputDir)
     {
         if (inputDir.magnitude < 0.1f) return Vector2.right;
         
-        // 判断是否为纯下方向移动
         float horizontalThreshold = 0.2f;
         
         if (inputDir.y < 0)
@@ -152,38 +199,47 @@ public class CharacterLogic : MonoBehaviour
     {
         float size = mainCamera.orthographicSize;
         float aspect = mainCamera.aspect;
-    float horizontalOffset = 1f; // 左右边界缩回的距离（原为 0.5f）
-    float topOffset = 2.5f;        // 上边界缩回的距离（缩得多一些）
-    float bottomOffset =-0.3f;     // 下边界保持原样或微调
+        
+        float leftOffset = 1.5f;
+        float rightOffset = 1f;
+        float topOffset = 2.5f;
+        float bottomOffset = -0.3f;
+        
+        if (GameManager.instance != null && GameManager.instance.Map_id == 2)
+        {
+            leftOffset = 1.4f;
+            rightOffset = 2.8f;
+            topOffset = 3f;
+            bottomOffset = 1.4f;
+        }
 
-    rightBound = size * aspect - horizontalOffset;
-    leftBound = -rightBound;
-    
-    topBound = size - topOffset;
-    bottomBound = -(size - bottomOffset); 
-    // --- 修改结束 ---
+        rightBound = size * aspect - rightOffset;
+        leftBound = -(size * aspect - leftOffset);
+        
+        topBound = size - topOffset;
+        bottomBound = -(size - bottomOffset);
     }
 
-   private void LimitToScreen()
-{
-    if (mainCamera == null) return;
-    Vector2 pos = rb.position;
-    Vector2 vel = rb.velocity; // 获取速度
-    bool changed = false;
-
-    if (pos.x < leftBound) { pos.x = leftBound; vel.x = 0; changed = true; }
-    else if (pos.x > rightBound) { pos.x = rightBound; vel.x = 0; changed = true; }
-    
-    if (pos.y < bottomBound) { pos.y = bottomBound; vel.y = 0; changed = true; }
-    else if (pos.y > topBound) { pos.y = topBound; vel.y = 0; changed = true; }
-
-    if (changed)
+    private void LimitToScreen()
     {
-        rb.position = pos; // 修正坐标
-        rb.velocity = vel; // 关键：撞墙瞬间必须杀掉速度，防止抖动
-        if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
+        if (mainCamera == null) return;
+        Vector2 pos = rb.position;
+        Vector2 vel = rb.velocity;
+        bool changed = false;
+
+        if (pos.x < leftBound) { pos.x = leftBound; vel.x = 0; changed = true; }
+        else if (pos.x > rightBound) { pos.x = rightBound; vel.x = 0; changed = true; }
+        
+        if (pos.y < bottomBound) { pos.y = bottomBound; vel.y = 0; changed = true; }
+        else if (pos.y > topBound) { pos.y = topBound; vel.y = 0; changed = true; }
+
+        if (changed)
+        {
+            rb.position = pos;
+            rb.velocity = vel;
+            if (currentRole == Role.Bot) { isStopped = true; moveDir = Vector2.zero; }
+        }
     }
-}
 
     void HandleP1()
     {
@@ -196,6 +252,7 @@ public class CharacterLogic : MonoBehaviour
         ProcessInput(rawInput.x, rawInput.y);
 
         if (Input.GetKeyDown(KeyCode.F) && CanAttack()) Attack();
+        if (Input.GetKeyDown(KeyCode.G) && currentTool != ToolType.None) UseTool();
     }
 
     void HandleP2()
@@ -209,6 +266,7 @@ public class CharacterLogic : MonoBehaviour
         ProcessInput(rawInput.x, rawInput.y);
 
         if ((Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Alpha0)) && CanAttack()) Attack();
+        if (Input.GetKeyDown(KeyCode.Minus) && currentTool != ToolType.None) UseTool();
     }
 
     void ProcessInput(float x, float y)
@@ -232,92 +290,173 @@ public class CharacterLogic : MonoBehaviour
     {
         return Time.time - lastAttackTime >= attackCooldown && !isAttacking && !isDead;
     }
-
-    void Attack()
+    
+    void UseTool()
     {
-        // 冷却与攻击状态检查（仅近战有冷却，射击有自己的冷却）
-        if (currentWeapon == WeaponType.Melee && !CanAttack()) return;
-
-        if (currentWeapon == WeaponType.Gun)
+        if (currentTool == ToolType.Gun)
         {
             Vector2 shootDir = lastMoveDir.normalized;
             if (shootDir == Vector2.zero) shootDir = Vector2.right;
+            
+            Vector2 origin = (Vector2)transform.position + shootOffset + shootDir * 0.65f;
+            origin.y += 1f;
+            
+            RaycastHit2D[] hits = Physics2D.CircleCastAll(origin, 0.25f, shootDir, shootRange);
+            
+            Debug.DrawRay(origin, shootDir * shootRange, Color.red, 0.8f);
 
-            Vector2 origin = (Vector2)transform.position + shootOffset * shootDir;
-            RaycastHit2D[] hits = Physics2D.RaycastAll(origin, shootDir, shootRange);
-            Debug.DrawRay(origin, shootDir * shootRange, Color.red, 0.2f);
-
-            // 将射线命中转换为碰撞体数组
-            Collider2D[] hitColliders = new Collider2D[hits.Length];
-            for (int i = 0; i < hits.Length; i++) hitColliders[i] = hits[i].collider;
-
-            // 统一处理命中目标
+            Collider2D[] hitColliders = System.Array.ConvertAll(hits, h => h.collider);
             ProcessHitTargets(hitColliders);
-            currentWeapon = WeaponType.Melee;
         }
-        else // 近战攻击
+        else if (currentTool == ToolType.Bomb)
         {
-            lastAttackTime = Time.time;
-
-            if (animator != null)
-                animator.SetTrigger("Attack");
-
-            isAttacking = true;
-            moveDir = Vector2.zero;
-            isStopped = true;
-            StartCoroutine(WaitForAttackEnd());
-
-            if (spriteRenderer != null)
-                StartCoroutine(AttackFlash());
-
-            Vector2 hitBoxCenter = (Vector2)transform.position + lastMoveDir * 0.8f;
-            Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, new Vector2(1.2f, 1.2f), 0f);
-
-            // 统一处理命中目标
-            ProcessHitTargets(hitColliders);
+            StartBombCountdown();
+            bombAnimation = true;
         }
+        else if (currentTool == ToolType.Smoke)
+        {
+            Instantiate(smokeEffectPrefab, transform.position + Vector3.up * 1f, Quaternion.identity);
+        }
+        
+        currentTool = ToolType.None;
     }
-
-// ========== 公共目标处理 ==========
-private void ProcessHitTargets(Collider2D[] hits)
-{
-    CharacterLogic bestTarget = null;
-    float nearestDistance = float.MaxValue;
-    Vector2 attackerPos = transform.position;
-
-    foreach (var hit in hits)
+    
+    // 新增：启动炸弹倒计时
+    private void StartBombCountdown()
     {
-        if (hit == null) continue;
-        if (hit.gameObject == gameObject) continue;
-        if (hit.CompareTag("Boundary")) continue;
-
-        CharacterLogic target = hit.GetComponent<CharacterLogic>();
-        if (target != null && !target.isDead)
+        bombTimer = bombCountdown;
+        bombActive = true;
+        
+        // 创建UI
+        if (bombCountdownUI != null && bombUIInstance == null)
         {
-            float distance = Vector2.Distance(attackerPos, target.transform.position);
-            if (distance < nearestDistance)
+            bombUIInstance = Instantiate(bombCountdownUI, transform);
+            
+            // 获取TextMeshPro组件
+            bombText = bombUIInstance.GetComponentInChildren<TextMeshProUGUI>();
+            if (bombText != null)
             {
-                nearestDistance = distance;
-                bestTarget = target;
+                bombText.text = Mathf.CeilToInt(bombTimer).ToString();
             }
         }
     }
-
-    if (bestTarget != null)
+    
+    // 新增：更新炸弹UI
+    private void UpdateBombUI()
     {
-        bestTarget.Die();
-
-        if (bestTarget.currentRole == Role.Player1)
-            GameManager.instance.EndGame("玩家二（红）获胜！");
-        else if (bestTarget.currentRole == Role.Player2)
-            GameManager.instance.EndGame("玩家一（蓝）获胜！");
+        if (bombUIInstance != null)
+        {
+            // 跟随角色
+            bombUIInstance.transform.position = transform.position  + Vector3.right * 0.9f + Vector3.up * 2f;
+            
+            // 更新倒计时显示
+            if (bombText != null)
+            {
+                int displayTime = Mathf.CeilToInt(bombTimer);
+                bombText.text = displayTime.ToString();
+                
+                // 颜色闪烁效果
+                if (bombTimer <= 3f)
+                {
+                    bombText.color = Color.Lerp(Color.red, Color.white, Mathf.PingPong(Time.time * 5f, 1f));
+                }
+                else
+                {
+                    bombText.color = Color.yellow;
+                }
+            }
+        }
     }
-}
-
+    
+    // 新增：炸弹爆炸
+    private void ExplodeBomb()
+    {
+        bombActive = false;
+        
+        // 检测爆炸范围内的所有角色
+        Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position + Vector3.up * 1f, bombRadius);
+        
+        bool killedEnemyPlayer = false;
+        bool killedSelf = false;
+        
+        foreach (Collider2D hit in hitColliders)
+        {
+            if (hit == null || hit.gameObject == gameObject) continue;
+            
+            CharacterLogic target = hit.GetComponent<CharacterLogic>();
+            if (target != null && !target.isDead)
+            {
+                // 杀死范围内的所有人物
+                target.Die();
+                
+                // 检查是否杀死了敌方玩家
+                if (target.currentRole != currentRole)
+                {
+                    if ( target.currentRole != Role.Bot)
+                    {
+                        killedEnemyPlayer = true;
+                    }
+                }
+            }
+        }
+        
+        // 清理UI
+        if (bombUIInstance != null)
+        {
+            Destroy(bombUIInstance);
+            bombUIInstance = null;
+            bombText = null;
+        }
+        
+        // 重置工具
+        currentTool = ToolType.None;
+        
+        // 判定胜负
+        if (GameManager.instance != null)
+        {
+            if (killedEnemyPlayer)
+            {
+                // 杀死了敌方玩家，当前玩家获胜
+                if (currentRole == Role.Player1)
+                {
+                    GameManager.instance.EndGame("玩家一炸死玩家二！玩家一（蓝）获胜！");
+                }
+                else if (currentRole == Role.Player2)
+                {
+                    GameManager.instance.EndGame("玩家二炸死玩家一！玩家二（红）获胜！");
+                }
+            }
+            else
+            {
+                // 只炸死了自己，对方获胜
+                if (currentRole == Role.Player1)
+                {
+                    GameManager.instance.EndGame("玩家一炸死自己！玩家二（红）获胜！");
+                }
+                else if (currentRole == Role.Player2)
+                {
+                    GameManager.instance.EndGame("玩家二炸死自己！玩家一（蓝）获胜！");
+                }
+            }
+        }
+    }
+    
+    // 修改：死亡时清理炸弹
     public void Die()
     {
         if (isDead) return;
         isDead = true;
+        
+        // 清理炸弹UI
+        if (bombUIInstance != null)
+        {
+            Destroy(bombUIInstance);
+            bombUIInstance = null;
+            bombText = null;
+        }
+        
+        // 停止炸弹倒计时
+        bombActive = false;
 
         if (animator != null)
         {
@@ -332,6 +471,69 @@ private void ProcessHitTargets(Collider2D[] hits)
         StopAllCoroutines();
 
         StartCoroutine(DieAndDestroyAfterAnimation());
+    }
+
+    void Attack()
+    {
+        if (isDead || isAttacking) return;        
+        lastAttackTime = Time.time;
+
+        if (animator != null)
+            animator.SetTrigger("Attack");
+
+        isAttacking = true;
+        moveDir = Vector2.zero;
+        isStopped = true;
+
+        StartCoroutine(WaitForAttackEnd());
+        if (spriteRenderer != null)
+            StartCoroutine(AttackFlash());
+
+        Vector2 attackDir = lastMoveDir.normalized;
+        if (attackDir == Vector2.zero) attackDir = Vector2.right;
+        
+        float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
+
+        Vector2 boxSize = new Vector2(1.5f, 1.35f);
+        Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;
+        hitBoxCenter.y += 1f;
+
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
+        ProcessHitTargets(hitColliders);
+    }
+
+    private void ProcessHitTargets(Collider2D[] hits)
+    {
+        CharacterLogic bestTarget = null;
+        float nearestDistance = float.MaxValue;
+        Vector2 attackerPos = transform.position;
+
+        foreach (var hit in hits)
+        {
+            if (hit == null) continue;
+            if (hit.gameObject == gameObject) continue;
+            if (hit.CompareTag("Boundary")) continue;
+
+            CharacterLogic target = hit.GetComponent<CharacterLogic>();
+            if (target != null && !target.isDead)
+            {
+                float distance = Vector2.Distance(attackerPos, target.transform.position);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    bestTarget = target;
+                }
+            }
+        }
+
+        if (bestTarget != null)
+        {
+            bestTarget.Die();
+            if (bestTarget.currentRole == Role.Player1)
+                GameManager.instance.EndGame("玩家二（红）获胜！");
+            else if (bestTarget.currentRole == Role.Player2)
+                GameManager.instance.EndGame("玩家一（蓝）获胜！");
+        }
     }
 
     IEnumerator DieAndDestroyAfterAnimation()
@@ -351,7 +553,6 @@ private void ProcessHitTargets(Collider2D[] hits)
     {
         if (spriteRenderer != null)
         {
-            // 在非调试模式下，闪光效果可能不太明显
             Color flashColor = debugMode ? Color.yellow : new Color(1f, 1f, 0.8f, 1f);
             spriteRenderer.color = flashColor;
             yield return new WaitForSeconds(0.1f);
@@ -370,14 +571,14 @@ private void ProcessHitTargets(Collider2D[] hits)
 
             if (!isAttacking)
             {
-                int behavior = Random.Range(0, 10);
+                int behavior = Random.Range(0, 3);
                 if (behavior != 0)
                 {
                     float angle = Random.Range(0f, 360f);
                     moveDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
                     lastMoveDir = moveDir;
                     isStopped = false;
-                    float moveTime = Random.Range(0.5f, 2f);
+                    float moveTime = Random.Range(0.3f, 1f);
                     yield return new WaitForSeconds(moveTime);
                 }
                 else
@@ -401,6 +602,91 @@ private void ProcessHitTargets(Collider2D[] hits)
         {
             isStopped = true;
             moveDir = Vector2.zero;
+            
+            CheckBotCollision(collision.gameObject);
+        }
+    }
+    
+    private void CheckBotCollision(GameObject otherObject)
+    {
+        if (GameManager.instance == null || GameManager.instance.Map_id != 2)
+            return;
+            
+        CharacterLogic otherCharacter = otherObject.GetComponent<CharacterLogic>();
+        if (otherCharacter == null) return;
+        
+        if (currentRole == Role.Bot && otherCharacter.currentRole == Role.Bot)
+        {
+            if (Random.Range(0f, 1f) <= 0.05f)
+            {
+                if (!isDead && !otherCharacter.isDead)
+                {
+                    PlayTeleportAtPosition(transform.position, 1.5f);
+                    otherCharacter.PlayTeleportAtPosition(otherCharacter.transform.position, 1.5f);
+                    
+                    StartCoroutine(DelayedDestroyBoth(otherCharacter));
+                }
+            }
+        }
+    }
+    
+    private IEnumerator DelayedDestroyBoth(CharacterLogic otherBot)
+    {
+        yield return new WaitForSeconds(0.05f);
+        
+        if (!isDead)
+        {
+            isDead = true;
+            if (animator != null)
+                animator.SetTrigger("Die");
+            rb.velocity = Vector2.zero;
+            moveDir = Vector2.zero;
+            isStopped = true;
+            isAttacking = false;
+        }
+        
+        if (!otherBot.isDead)
+        {
+            otherBot.isDead = true;
+            if (otherBot.animator != null)
+                otherBot.animator.SetTrigger("Die");
+            otherBot.rb.velocity = Vector2.zero;
+            otherBot.moveDir = Vector2.zero;
+            otherBot.isStopped = true;
+            otherBot.isAttacking = false;
+        }
+        
+        yield return new WaitForSeconds(0.5f);
+        
+        Destroy(gameObject);
+        Destroy(otherBot.gameObject);
+    }
+    
+    private void PlayExplosionAtPosition(Vector3 position)
+    {
+        if (explosionEffectPrefab == null) return;
+        
+        GameObject explosion = Instantiate(explosionEffectPrefab, position, Quaternion.identity);
+        
+        SpriteRenderer explosionRenderer = explosion.GetComponent<SpriteRenderer>();
+        if (explosionRenderer != null)
+        {
+            explosionRenderer.sortingOrder = 99;
+        }
+        explosion.transform.localScale = new Vector3(bombRadius * 0.7f, bombRadius * 0.7f, 1f);
+    }
+    
+    public void PlayTeleportAtPosition(Vector3 position, float yOffset = 1.5f)
+    {   
+        if (teleportEffectPrefab == null) return;
+        
+        Vector3 effectPosition = new Vector3(position.x, position.y + yOffset, position.z);
+        GameObject effect = Instantiate(teleportEffectPrefab, effectPosition, Quaternion.identity);
+        
+        SpriteRenderer effectRenderer = effect.GetComponent<SpriteRenderer>();
+        if (effectRenderer != null)
+        {
+            effectRenderer.sortingOrder = 100;
         }
     }
 }
