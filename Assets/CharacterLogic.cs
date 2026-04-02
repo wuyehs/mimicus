@@ -11,7 +11,7 @@ public class CharacterLogic : MonoBehaviour
     // 统一的武器/工具系统
     [Header("工具系统")]
     public ToolType currentTool = ToolType.None;
-    public enum ToolType { Smoke, Gun, Bomb, None }
+    public enum ToolType { Smoke, Gun, Bomb, PhantomStaff, None }
     
     public Vector2 shootOffset = new Vector2(0.4f, 0f);
     public float shootRange = 10f;       
@@ -122,6 +122,11 @@ public class CharacterLogic : MonoBehaviour
     public void PickUpSmokeGrenade()
     {
         currentTool = ToolType.Smoke;
+    }
+
+    public void PickUpPhantomStaff()
+    {
+        currentTool = ToolType.PhantomStaff;
     }
 
     private Vector2 GetAnimationDirection(Vector2 inputDir)
@@ -304,6 +309,10 @@ public class CharacterLogic : MonoBehaviour
         {
             Instantiate(smokeEffectPrefab, transform.position + Vector3.up * 1f, Quaternion.identity);
         }
+        else if (currentTool == ToolType.PhantomStaff)
+        {
+            SummonPhantomAtEnemy();
+        }
         
         currentTool = ToolType.None;
     }
@@ -370,6 +379,81 @@ public class CharacterLogic : MonoBehaviour
                 GameManager.instance.EndGame("玩家一（蓝）获胜！");
         }
     }
+
+    // ==================== 幻影法杖召唤逻辑 ====================
+    private void SummonPhantomAtEnemy()
+    {
+        // 1. 确定敌方玩家
+        Role enemyRole = (this.currentRole == Role.Player1) ? Role.Player2 : Role.Player1;
+
+        // 2. 查找敌方玩家对象
+        CharacterLogic enemy = null;
+        CharacterLogic[] allChars = FindObjectsOfType<CharacterLogic>();
+        foreach (var c in allChars)
+        {
+            if (c.currentRole == enemyRole && !c.isDead)
+            {
+                enemy = c;
+                break;
+            }
+        }
+        if (enemy == null) return;
+
+        // 3. 随机生成点（敌方周围 2~4 单位）
+        Vector2 spawnPos = GetRandomPositionNear(enemy.transform.position, 0.2f, 1f);
+
+        // 4. 实例化新的 AI（使用 GameManager 中的角色预制体）
+        if (GameManager.instance == null || GameManager.instance.charPrefab == null)
+        {
+            Debug.LogError("GameManager 或 charPrefab 未设置！");
+            return;
+        }
+
+        GameObject newBotObj = Instantiate(GameManager.instance.charPrefab, spawnPos, Quaternion.identity);
+        CharacterLogic newBot = newBotObj.GetComponent<CharacterLogic>();
+        if (newBot != null)
+        {
+            // 设置为 Bot 角色
+            newBot.currentRole = Role.Bot;
+            newBot.debugMode = GameManager.instance.debugMode;
+            // 可选：同步颜色（调试模式）
+            if (newBot.debugMode)
+            {
+                SpriteRenderer sr = newBot.GetComponent<SpriteRenderer>();
+                if (sr != null) sr.color = Color.gray;
+            }
+            // 可选：添加短暂无敌或标记为“幻影”（此处无特殊行为）
+        }
+
+        // 5. 播放召唤特效（复用传送特效）
+        PlayTeleportAtPosition(spawnPos, 0f);
+    }
+
+    private Vector2 GetRandomPositionNear(Vector2 center, float minRadius, float maxRadius)
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            float angle = Random.Range(0f, Mathf.PI * 2);
+            float radius = Random.Range(minRadius, maxRadius);
+            Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+            Vector2 candidate = center + offset;
+
+            // 简单边界检测（使用 Camera 边界，避免生成到墙外）
+            if (mainCamera != null)
+            {
+                Vector3 viewPos = mainCamera.WorldToViewportPoint(candidate);
+                if (viewPos.x > 0.1f && viewPos.x < 0.9f && viewPos.y > 0.1f && viewPos.y < 0.9f)
+                    return candidate;
+            }
+            else
+            {
+                return candidate;
+            }
+        }
+        // 保底位置：敌方位置稍微偏移
+        return center + new Vector2(1f, 0);
+    }
+    // ==================== 召唤逻辑结束 ====================
 
     public void Die()
     {
@@ -535,7 +619,7 @@ public class CharacterLogic : MonoBehaviour
     {   
         if (teleportEffectPrefab == null) return;
         
-        Vector3 effectPosition = new Vector3(position.x, position.y + yOffset, position.z);
+        Vector3 effectPosition = new Vector3(position.x, position.y + yOffset+1.5f, position.z);
         GameObject effect = Instantiate(teleportEffectPrefab, effectPosition, Quaternion.identity);
         
         SpriteRenderer effectRenderer = effect.GetComponent<SpriteRenderer>();

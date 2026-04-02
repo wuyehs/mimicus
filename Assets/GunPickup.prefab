@@ -166,11 +166,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6155521142681643216, guid: ba4c5a5fe55a7684da94b3420a1ef7e7, type: 3}
       propertyPath: playOnAwake
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6155521142681643216, guid: ba4c5a5fe55a7684da94b3420a1ef7e7, type: 3}
-      propertyPath: InitialModule.startSize.scalar
-      value: 2
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6311576327385451691, guid: ba4c5a5fe55a7684da94b3420a1ef7e7, type: 3}
       propertyPath: m_LocalPosition.x

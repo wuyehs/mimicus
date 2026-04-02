@@ -6,14 +6,15 @@ public class WeaponSpawner : MonoBehaviour
 {
     [Header("生成设置")]
     public float minSpawnDelay = 1f;   // 最小等待时间（秒）
-    public float maxSpawnDelay = 5f;  // 最大等待时间（秒）
+    public float maxSpawnDelay = 5f;   // 最大等待时间（秒）
     public bool spawnOnlyWhenEmpty = true; // 仅当场上无道具时生成
 
     [Header("道具预制体")]
-    public GameObject[] weaponPrefabs;  // 将烟雾弹、手枪、炸弹的预制体拖入此处
+    public GameObject[] weaponPrefabs;  // 将烟雾弹、手枪、炸弹等预制体拖入此处
     // 注意：请确保每个预制体的 Tag 都设置为 "Pickup"，以便生成器检测
 
-    private bool isSpawning = false;
+    [Header("道具消失时间")]
+    public float pickupLifetime = 6f;  // 道具未被拾取时自动消失的时间（秒）
 
     void Start()
     {
@@ -66,8 +67,22 @@ public class WeaponSpawner : MonoBehaviour
             weapon.tag = "Pickup";
         }
 
+        // 启动协程，让道具在 pickupLifetime 秒后自动消失（若未被拾取）
+        StartCoroutine(AutoDestroyWeapon(weapon, pickupLifetime));
+
         // 可选：打印生成信息
         Debug.Log($"生成道具: {weaponPrefab.name} 在位置 {spawnPosition}");
+    }
+
+    IEnumerator AutoDestroyWeapon(GameObject weapon, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        // 如果道具还存在（未被拾取销毁），则销毁它
+        if (weapon != null)
+        {
+            Destroy(weapon);
+            Debug.Log($"道具 {weapon.name} 因超时未被拾取，已自动消失。");
+        }
     }
 
     Vector2 GetRandomPositionWithinCamera()
@@ -83,7 +98,7 @@ public class WeaponSpawner : MonoBehaviour
         Vector2 min = cam.ViewportToWorldPoint(new Vector3(0, 0, 0));
         Vector2 max = cam.ViewportToWorldPoint(new Vector3(1, 1, 0));
 
-        // 为了避免生成在屏幕边缘，可以缩小一点范围（可选）
+        // 为了避免生成在屏幕边缘，缩小一点范围（可选）
         float paddingX = 0.5f;
         float paddingY = 0.5f;
         float x = Random.Range(min.x + paddingX, max.x - paddingX);

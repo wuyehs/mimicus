@@ -54,15 +54,17 @@ public abstract class BasePickup : MonoBehaviour
             // 播放消失特效
             if (despawnEffect != null)
             {
+                Debug.Log("播放消失特效");
                 despawnEffect.Play();
-                // 禁用渲染器和碰撞体
+                // 禁用渲染器和碰撞体             
                 GetComponent<SpriteRenderer>().enabled = false;
                 GetComponent<Collider2D>().enabled = false;
-                float effectDuration = despawnEffect.main.duration + 0.3f;
+                float effectDuration = despawnEffect.main.duration + 1.3f;
                 StartCoroutine(DestroyAfterEffect(effectDuration));
             }
             else
             {
+                Debug.LogError("despawnEffect 为空，无法播放消失特效");
                 Destroy(gameObject);
             }
         }
