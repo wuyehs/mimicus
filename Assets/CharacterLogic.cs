@@ -419,11 +419,11 @@ public class CharacterLogic : MonoBehaviour
                 // 杀死了敌方玩家，当前玩家获胜
                 if (currentRole == Role.Player1)
                 {
-                    GameManager.instance.EndGame("玩家一炸死玩家二！玩家一（蓝）获胜！");
+                    GameManager.instance.EndGame("PLAYER 1 WINS!");
                 }
                 else if (currentRole == Role.Player2)
                 {
-                    GameManager.instance.EndGame("玩家二炸死玩家一！玩家二（红）获胜！");
+                    GameManager.instance.EndGame("PLAYER 2 WINS!");
                 }
             }
             else
@@ -431,11 +431,11 @@ public class CharacterLogic : MonoBehaviour
                 // 只炸死了自己，对方获胜
                 if (currentRole == Role.Player1)
                 {
-                    GameManager.instance.EndGame("玩家一炸死自己！玩家二（红）获胜！");
+                    GameManager.instance.EndGame("PLAYER 2 WINS!");
                 }
                 else if (currentRole == Role.Player2)
                 {
-                    GameManager.instance.EndGame("玩家二炸死自己！玩家一（蓝）获胜！");
+                    GameManager.instance.EndGame("PLAYER 1 WINS!");
                 }
             }
         }
@@ -530,9 +530,9 @@ public class CharacterLogic : MonoBehaviour
         {
             bestTarget.Die();
             if (bestTarget.currentRole == Role.Player1)
-                GameManager.instance.EndGame("玩家二（红）获胜！");
+                GameManager.instance.EndGame("PLAYER 2 WINS!");
             else if (bestTarget.currentRole == Role.Player2)
-                GameManager.instance.EndGame("玩家一（蓝）获胜！");
+                GameManager.instance.EndGame("PLAYER 1 WINS!");
         }
     }
 

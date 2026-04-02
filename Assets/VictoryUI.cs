@@ -17,6 +17,6 @@ public class VictoryUI : MonoBehaviour
     public void PlayAgain()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene(replaySceneName);
+        SceneManager.LoadScene(GameManager.lastLevelSceneName);
     }
 }

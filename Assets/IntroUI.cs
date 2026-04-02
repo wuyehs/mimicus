@@ -18,17 +18,26 @@ public class IntroUI : MonoBehaviour
 
     private string[] titles =
     {
-        "GAME INTRODUCTION",
-        "MISSION",
-        "HOW TO PLAY"
+        "GAME OVERVIEW",
+        "FIREARM",
+        "SMOKE GRENADE",
+        "HIGH-STAKES BOMB",
+        "CROWD BEACON"
     };
+
 
     private string[] contents =
     {
-        "This game is about hiding among robots in a sci-fi environment. The player must stay unnoticed and survive in a world full of mechanical guards.",
-        "Your mission is to blend in with the robots, avoid suspicion, and complete your objectives without being detected.",
-        "Observe the movement of other robots carefully. Move, hide, and act naturally so that enemies cannot identify you."
-    };
+    "Stalker is a multiplayer stealth game where you blend in with AI bots and eliminate your rival. Missed attacks cause a 5-second rigidity, so every move matters.",
+
+    "A precise long-range weapon for safe eliminations. However, every shot reveals your position with a visible muzzle flash.",
+
+    "Creates a dense smoke screen that blocks vision. Use it to escape after a kill or to hide your identity when exposed.",
+
+    "A powerful explosive with a wide blast radius. If it fails to kill your rival, it backfires and kills the user after 5 seconds.",
+
+    "Summons a group of AI bots near your enemy. Use the chaos to confuse, distract, or trap your opponent."
+};
 
     void Start()
     {
