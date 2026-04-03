@@ -19,6 +19,7 @@ public class IntroUI : MonoBehaviour
     private string[] titles =
     {
         "GAME OVERVIEW",
+        "KEY CONTORLS",
         "FIREARM",
         "SMOKE GRENADE",
         "HIGH-STAKES BOMB",
@@ -29,6 +30,8 @@ public class IntroUI : MonoBehaviour
     private string[] contents =
     {
     "Stalker is a multiplayer stealth game where you blend in with AI bots and eliminate your rival. Missed attacks cause a 5-second rigidity, so every move matters.",
+    
+    "Player 1: Move (WASD) | Attack (F) | Use Tool (G) \n Player 2: Move (Arrow Keys) | Attack (0) | Use Tool (-)",
 
     "A precise long-range weapon for safe eliminations. However, every shot reveals your position with a visible muzzle flash.",
 
