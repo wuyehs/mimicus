@@ -632,7 +632,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 41248424}
-  debugMode: 1
+  debugMode: 0
   cameraSize: 5
   cameraSizeForMap3: 5
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}

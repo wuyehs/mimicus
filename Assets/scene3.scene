@@ -793,8 +793,8 @@ Transform:
   m_GameObject: {fileID: 337057138}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.20535019, w: 0.9786886}
-  m_LocalPosition: {x: -3.27, y: 2.32, z: 0}
-  m_LocalScale: {x: 1.0785921, y: 1.9915, z: 1}
+  m_LocalPosition: {x: -3.3748, y: 2.5297, z: 0}
+  m_LocalScale: {x: 1.1019975, y: 2.4597018, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -940,7 +940,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 18dac340ea4a055479addee998d3b628, type: 2}
+  - {fileID: 10306, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1116,8 +1116,8 @@ Transform:
   m_GameObject: {fileID: 518525438}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.11753737, w: 0.99306846}
-  m_LocalPosition: {x: -4.5707, y: 2.8504, z: 0}
-  m_LocalScale: {x: 0.52348995, y: 0.55300075, z: 1}
+  m_LocalPosition: {x: -4.4622, y: 2.9549, z: 0}
+  m_LocalScale: {x: 0.8579418, y: 0.70545137, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1518,7 +1518,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 0}
-  debugMode: 1
+  debugMode: 0
   cameraSize: 5
   cameraSizeForMap3: 5
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}
@@ -2756,8 +2756,8 @@ Transform:
   m_GameObject: {fileID: 1899343559}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: -0.16934954, w: 0.98555607}
-  m_LocalPosition: {x: 4.4453, y: 2.9713, z: 0}
-  m_LocalScale: {x: 0.6494279, y: 0.50783986, z: 1}
+  m_LocalPosition: {x: 4.3405, y: 3.2975, z: 0}
+  m_LocalScale: {x: 1.6559622, y: 1.0527126, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}

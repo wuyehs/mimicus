@@ -17,6 +17,9 @@ public class MenuUI : MonoBehaviour
 
     public TMP_Text descriptionTitle;
     public TMP_Text descriptionText;
+    
+    // 添加第四个地图的按钮引用（可选）
+    public Button map4Button; // 可以在Inspector中分配
 
     void Start()
     {
@@ -100,7 +103,16 @@ public class MenuUI : MonoBehaviour
     public void LoadMap3()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("Scene2");
+        
+        SceneManager.LoadScene("scene2");
+    }
+    
+    // 添加第四个地图加载方法
+    public void LoadMap4()
+    {
+        Time.timeScale = 1f;
+        Debug.Log("Loading Map 4...");
+        SceneManager.LoadScene("Scene3"); // 修改为您的实际场景名称
     }
 
     public void SetVolume(float value)
@@ -114,14 +126,14 @@ public class MenuUI : MonoBehaviour
         Screen.fullScreen = isFullscreen;
     }
 
-    //��ͼѡ���ı���ش���
+    // 地图选择信息显示处理
     public void ShowMap1Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "Iron Cage";
+            descriptionTitle.text = "Jail";
 
         if (descriptionText != null)
-            descriptionText.text = "Judgment Spotlight: Turns Red for humans, white for AI. Hide or be exposed.";
+            descriptionText.text = "Do you know that spotlights would expose humans from robots ?";
     }
 
     public void ShowMap2Info()
@@ -130,7 +142,7 @@ public class MenuUI : MonoBehaviour
             descriptionTitle.text = "Volcanic Island";
 
         if (descriptionText != null)
-            descriptionText.text = "Lava Erosion: The safe zone shrinks. Stay inside the boundary or perish.";
+            descriptionText.text = "Do you know that lava would eventually overwhelm the whole island ?";
     }
 
     public void ShowMap3Info()
@@ -139,8 +151,19 @@ public class MenuUI : MonoBehaviour
             descriptionTitle.text = "Starship";
 
         if (descriptionText != null)
-            descriptionText.text = "Collision Annihilation: AI bots destroy each other on contact, stripping your cover fast.";
+            descriptionText.text = "Do you know that aliens might capture robots for their research ?";
     }
+    
+    // 添加第四个地图信息显示方法
+    public void ShowMap4Info()
+    {
+        if (descriptionTitle != null)
+            descriptionTitle.text = "Hospital"; // 请在这里填写地图4的名称
+
+        if (descriptionText != null)
+            descriptionText.text = "Do you know that a deadly virus just swept across this hospital ?"; // 请在这里填写地图4的描述
+    }
+    
     public void ShowDefaultMapInfo()
     {
         if (descriptionTitle != null)
@@ -149,7 +172,7 @@ public class MenuUI : MonoBehaviour
         if (descriptionText != null)
             descriptionText.text = "PLEASE SELECT A MAP";
     }
-    //�ı��������
+    // 文本显示结束
 
     public void SetResolution(int index)
     {

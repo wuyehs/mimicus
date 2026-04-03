@@ -39,6 +39,9 @@ public class CharacterLogic : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     
     private static readonly Color defaultColor = Color.white;
+    // ===== 病毒参数 =====
+    private float InfectedTime = 0f;
+    private bool isInfected = false;
 
     // ===== 动画控制 =====
     private Animator animator;
@@ -104,7 +107,10 @@ public class CharacterLogic : MonoBehaviour
     void Update()
     {
         if (isDead) return;
-        
+        if(GameManager.instance.Map_id == 4 && isInfected)
+        {
+           UpdateInfection(); 
+        } 
         // 新增：炸弹倒计时更新
         if (bombActive)
         {
@@ -137,7 +143,38 @@ public class CharacterLogic : MonoBehaviour
             else if (currentRole == Role.Player2) HandleP2();
         }
     }
-    
+
+    public void UpdateInfection()
+    {
+        float infectionDuration = Time.time - InfectedTime;
+        if(infectionDuration >= 30f)
+        {
+            animator.SetTrigger("Die");
+            Die();
+            if (GameManager.instance != null)
+            { 
+                if (currentRole == Role.Player1)
+                {
+                    GameManager.instance.EndGame("PLAYER 2 WINS!");
+                }
+                else if (currentRole == Role.Player2)
+                {
+                    GameManager.instance.EndGame("PLAYER 1 WINS!");
+                }
+            }
+        }
+        float infectionProgress = infectionDuration / 30f;
+        Color infectedColor = Color.Lerp(defaultColor, Color.green, infectionProgress);
+        spriteRenderer.color = infectedColor;
+    }
+    public void SetInfected()
+    {
+        if(isInfected)return;
+        InfectedTime = Time.time;
+        isInfected = true;
+    }
+
+
     public void PickUpGun()
     {
         currentTool = ToolType.Gun;
@@ -216,6 +253,13 @@ public class CharacterLogic : MonoBehaviour
             rightOffset = 2.8f;
             topOffset = 3f;
             bottomOffset = 1.4f;
+        }
+        else if(GameManager.instance.Map_id == 4)
+        {
+            leftOffset = 1.8f;
+            rightOffset = 1.8f;
+            topOffset = 2.7f;
+            bottomOffset = 0.5f;
         }
 
         rightBound = size * aspect - rightOffset;
@@ -695,13 +739,19 @@ public class CharacterLogic : MonoBehaviour
     
     private void CheckBotCollision(GameObject otherObject)
     {
-        if (GameManager.instance == null || GameManager.instance.Map_id != 2)
+        if (GameManager.instance == null || (GameManager.instance.Map_id != 2 && GameManager.instance.Map_id != 4))
             return;
             
         CharacterLogic otherCharacter = otherObject.GetComponent<CharacterLogic>();
         if (otherCharacter == null) return;
-        
-        if (currentRole == Role.Bot && otherCharacter.currentRole == Role.Bot)
+        if(GameManager.instance.Map_id == 4 && isInfected)
+        { 
+            if(Random.Range(0f, 1f) <= 0.5f)
+            {
+                otherCharacter.SetInfected();
+            }
+        }
+        if (currentRole == Role.Bot && otherCharacter.currentRole == Role.Bot && GameManager.instance.Map_id == 2)
         {
             if (Random.Range(0f, 1f) <= 0.05f)
             {

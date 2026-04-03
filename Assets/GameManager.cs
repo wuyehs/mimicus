@@ -51,7 +51,7 @@ public class GameManager : MonoBehaviour
     //新增胜利判定
     public static string finalWinnerMessage = "";
     public static string lastLevelSceneName = "";
-
+    private List<CharacterLogic> allCharacters = new List<CharacterLogic>();
     void Awake()
     {
         instance = this;
@@ -80,87 +80,125 @@ public class GameManager : MonoBehaviour
 
         if (winText != null) winText.gameObject.SetActive(false);
         SpawnCharacters();
+        if (Map_id == 4)
+        {
+            InfectRandomBot();
+        }
     }
 
     void SpawnCharacters()
+{
+    // 清空已有的列表
+    allCharacters.Clear();
+    
+    float minDistance = 1.5f; 
+    int maxAttempts = 10;     
+
+    for (int i = 0; i < totalCharacters; i++)
     {
-        // 使用统一的CharacterLogic类
-        List<CharacterLogic> allChars = new List<CharacterLogic>();
-        float minDistance = 1.5f; 
-        int maxAttempts = 10;     
+        Vector2 spawnPos = Vector2.zero;
+        bool isPosValid = false;
+        int attempts = 0;
 
-        for (int i = 0; i < totalCharacters; i++)
+        // 根据Map_id选择不同的生成范围
+        float currentXRange, currentYMax, currentYMin;
+        
+        if (Map_id == 3)
         {
-            Vector2 spawnPos = Vector2.zero;
-            bool isPosValid = false;
-            int attempts = 0;
+            // 图三的生成范围（已缩小一半）
+            currentXRange = xRangeForMap3;  // 1.5f
+            currentYMax = yMaxForMap3;      // 2.0f
+            currentYMin = yMinForMap3;      // -2.0f
+        }
+        else
+        {
+            // 图一二的生成范围（保持不变）
+            currentXRange = xRangeForMap12; // 6.0f
+            currentYMax = yMax;             // 4.0f
+            currentYMin = yMin;             // -4.0f
+        }
 
-            // 根据Map_id选择不同的生成范围
-            float currentXRange, currentYMax, currentYMin;
-            
-            if (Map_id == 3)
-            {
-                // 图三的生成范围（已缩小一半）
-                currentXRange = xRangeForMap3;  // 1.5f
-                currentYMax = yMaxForMap3;      // 2.0f
-                currentYMin = yMinForMap3;      // -2.0f
-            }
-            else
-            {
-                // 图一二的生成范围（保持不变）
-                currentXRange = xRangeForMap12; // 6.0f
-                currentYMax = yMax;             // 4.0f
-                currentYMin = yMin;             // -4.0f
-            }
+        while (!isPosValid && attempts < maxAttempts)
+        {
+            attempts++;
+            // 使用当前地图对应的生成范围
+            spawnPos = new Vector2(Random.Range(-currentXRange, currentXRange), Random.Range(currentYMin, currentYMax));
+            Debug.Log($"目前生成的地图ID: {Map_id}, 使用的X范围: {-currentXRange} to {currentXRange}, Y范围: {currentYMin} to {currentYMax}");
 
-            while (!isPosValid && attempts < maxAttempts)
+            isPosValid = true;
+            foreach (var existingChar in allCharacters)  // 使用成员变量
             {
-                attempts++;
-                // 使用当前地图对应的生成范围
-                spawnPos = new Vector2(Random.Range(-currentXRange, currentXRange), Random.Range(currentYMin, currentYMax));
-                Debug.Log($"目前生成的地图ID: {Map_id}, 使用的X范围: {-currentXRange} to {currentXRange}, Y范围: {currentYMin} to {currentYMax}");
-
-                isPosValid = true;
-                foreach (var existingChar in allChars)
+                if (existingChar != null && Vector2.Distance(spawnPos, (Vector2)existingChar.transform.position) < minDistance)
                 {
-                    if (existingChar != null && Vector2.Distance(spawnPos, (Vector2)existingChar.transform.position) < minDistance)
-                    {
-                        isPosValid = false;
-                        break;
-                    }
+                    isPosValid = false;
+                    break;
                 }
             }
-
-            GameObject go = Instantiate(charPrefab, spawnPos, Quaternion.identity);
-            
-            // 使用统一的CharacterLogic类
-            CharacterLogic logic = go.GetComponent<CharacterLogic>();
-            if (logic != null)
-            {
-                logic.debugMode = debugMode; 
-                allChars.Add(logic);
-            }
         }
 
-        // 分配玩家角色
-        if (allChars.Count >= 2)
+        GameObject go = Instantiate(charPrefab, spawnPos, Quaternion.identity);
+        
+        // 使用统一的CharacterLogic类
+        CharacterLogic logic = go.GetComponent<CharacterLogic>();
+        if (logic != null)
         {
-            int p1 = Random.Range(0, allChars.Count);
-            int p2 = Random.Range(0, allChars.Count);
-            while (p1 == p2) p2 = Random.Range(0, allChars.Count);
-
-            allChars[p1].currentRole = CharacterLogic.Role.Player1;
-            allChars[p2].currentRole = CharacterLogic.Role.Player2;
-            
-            if (debugMode)
-            {
-                if (allChars[p1].GetComponent<SpriteRenderer>() != null) 
-                    allChars[p1].GetComponent<SpriteRenderer>().color = Color.blue;
-                if (allChars[p2].GetComponent<SpriteRenderer>() != null) 
-                    allChars[p2].GetComponent<SpriteRenderer>().color = Color.red;
-            }
+            logic.debugMode = debugMode; 
+            allCharacters.Add(logic);  // 添加到成员变量
         }
     }
+
+    // 分配玩家角色
+    if (allCharacters.Count >= 2)  // 使用成员变量
+    {
+        int p1 = Random.Range(0, allCharacters.Count);
+        int p2 = Random.Range(0, allCharacters.Count);
+        while (p1 == p2) p2 = Random.Range(0, allCharacters.Count);
+
+        allCharacters[p1].currentRole = CharacterLogic.Role.Player1;
+        allCharacters[p2].currentRole = CharacterLogic.Role.Player2;
+        
+        if (debugMode)
+        {
+            if (allCharacters[p1].GetComponent<SpriteRenderer>() != null) 
+                allCharacters[p1].GetComponent<SpriteRenderer>().color = Color.blue;
+            if (allCharacters[p2].GetComponent<SpriteRenderer>() != null) 
+                allCharacters[p2].GetComponent<SpriteRenderer>().color = Color.red;
+        }
+    }
+}
+
+    private void InfectRandomBot()
+    {
+        if (allCharacters.Count == 0)
+        {
+            Debug.LogWarning("没有找到任何角色，无法感染");
+            return;
+        }
+        
+        // 收集所有Bot角色
+        List<CharacterLogic> botCharacters = new List<CharacterLogic>();
+        foreach (CharacterLogic character in allCharacters)
+        {
+            if (character != null && character.currentRole == CharacterLogic.Role.Bot)
+            {
+                botCharacters.Add(character);
+            }
+        }
+        
+        if (botCharacters.Count == 0)
+        {
+            Debug.LogWarning("没有找到Bot角色，无法感染");
+            return;
+        }
+        
+        int randomIndex = Random.Range(0, botCharacters.Count);
+        CharacterLogic infectedBot = botCharacters[randomIndex];
+        
+        // 调用CharacterLogic中的SetInfected方法
+        infectedBot.SetInfected();
+        Debug.Log($"已感染Bot: {infectedBot.name} (索引: {randomIndex + 1}/{botCharacters.Count})");
+    }
+
 
     void Update()
     {
