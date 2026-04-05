@@ -29,17 +29,17 @@ public class IntroUI : MonoBehaviour
 
     private string[] contents =
     {
-    "Stalker is a multiplayer stealth game where you blend in with AI bots and eliminate your rival. Missed attacks cause a 5-second rigidity, so every move matters.",
+    "玩家需要模仿 AI 行为隐藏身份，并伺机击杀对手。攻击一旦失手，会陷入 5 秒僵直。你需要灵活运用道具，同时应对地图机制。在这场伪装与观察的较量中，精准是生存的关键。",
     
-    "Player 1: Move (WASD) | Attack (F) | Use Tool (G) \n Player 2: Move (Arrow Keys) | Attack (0) | Use Tool (-)",
+    "Player 1：移动 (WASD) | 攻击 (F) | 使用道具 (G) \n Player 2：移动 (Arrow Keys) | 攻击 (0) | 使用道具 (-)",
 
-    "A precise long-range weapon for safe eliminations. However, every shot reveals your position with a visible muzzle flash.",
+    "高精度远程武器，可在安全距离击杀目标，但枪口火光会暴露你的位置。",
 
-    "Creates a dense smoke screen that blocks vision. Use it to escape after a kill or to hide your identity when exposed.",
+    "快速释放大片烟雾，遮挡视野，适合刺杀后脱身或暴露后重新隐藏身份。",
 
-    "A powerful explosive with a wide blast radius. If it fails to kill your rival, it backfires and kills the user after 5 seconds.",
+    "大范围高杀伤武器，但若未能炸死对手，5 秒后会反噬使用者。",
 
-    "Summons a group of AI bots near your enemy. Use the chaos to confuse, distract, or trap your opponent."
+    "在敌人附近召唤一群 AI，制造混乱，干扰判断，甚至将对方困入 AI 人潮中。"
 };
 
     void Start()

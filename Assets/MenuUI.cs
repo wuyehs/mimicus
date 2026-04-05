@@ -12,7 +12,7 @@ public class MenuUI : MonoBehaviour
 
     public Slider volumeSlider;
     public Toggle fullscreenToggle;
-    public TMP_Dropdown resolutionDropdown;
+    //public TMP_Dropdown resolutionDropdown;
     public AudioSource bgmSource;
 
     public TMP_Text descriptionTitle;
@@ -37,11 +37,11 @@ public class MenuUI : MonoBehaviour
             fullscreenToggle.onValueChanged.AddListener(SetFullscreen);
         }
 
-        if (resolutionDropdown != null)
+       /* if (resolutionDropdown != null)
         {
             resolutionDropdown.onValueChanged.RemoveAllListeners();
             resolutionDropdown.onValueChanged.AddListener(SetResolution);
-        }
+        } */
 
         ShowDefaultMapInfo();
     }
@@ -130,51 +130,51 @@ public class MenuUI : MonoBehaviour
     public void ShowMap1Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "Jail";
+            descriptionTitle.text = "监狱";
 
         if (descriptionText != null)
-            descriptionText.text = "Do you know that spotlights would expose humans from robots ?";
+            descriptionText.text = "你知道探照灯会暴露伪装在机器中的人类吗?";
     }
 
     public void ShowMap2Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "Volcanic Island";
+            descriptionTitle.text = "火山岛";
 
         if (descriptionText != null)
-            descriptionText.text = "Do you know that lava would eventually overwhelm the whole island ?";
+           descriptionText.text = "你知道熔岩最终会吞没整座岛屿吗?";
     }
 
     public void ShowMap3Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "Starship";
+            descriptionTitle.text = "星舰";
 
         if (descriptionText != null)
-            descriptionText.text = "Do you know that aliens might capture robots for their research ?";
+            descriptionText.text = "你知道外星人可能会为了研究而捕获机器人吗?";
     }
     
     // 添加第四个地图信息显示方法
     public void ShowMap4Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "Hospital"; // 请在这里填写地图4的名称
+            descriptionTitle.text = "医院"; // 请在这里填写地图4的名称
 
         if (descriptionText != null)
-            descriptionText.text = "Do you know that a deadly virus just swept across this hospital ?"; // 请在这里填写地图4的描述
+            descriptionText.text = "你知道一种致命病毒刚刚席卷了这家医院吗?"; // 请在这里填写地图4的描述
     }
     
     public void ShowDefaultMapInfo()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "MAP SELECT";
+            descriptionTitle.text = "地图选择";
 
         if (descriptionText != null)
-            descriptionText.text = "PLEASE SELECT A MAP";
+            descriptionText.text = "请选择一张地图";
     }
     // 文本显示结束
 
-    public void SetResolution(int index)
+   /* public void SetResolution(int index)
     {
         switch (index)
         {
@@ -188,7 +188,7 @@ public class MenuUI : MonoBehaviour
                 Screen.SetResolution(1280, 720, Screen.fullScreen);
                 break;
         }
-    }
+    }   */
 
     public void QuitGame()
     {
