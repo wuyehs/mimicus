@@ -9,6 +9,7 @@ public class MenuUI : MonoBehaviour
     public GameObject mapSelectPanel;
     public GameObject settingsPanel;
     public GameObject pausePanel;
+    public GameObject introPanel;
 
     public Slider volumeSlider;
     public Toggle fullscreenToggle;
@@ -23,6 +24,8 @@ public class MenuUI : MonoBehaviour
 
     void Start()
     {
+        //ShowMainMenu();//使用强制生成主菜单函数
+
         if (volumeSlider != null && bgmSource != null)
         {
             volumeSlider.SetValueWithoutNotify(bgmSource.volume);
@@ -44,6 +47,30 @@ public class MenuUI : MonoBehaviour
         } */
 
         ShowDefaultMapInfo();
+    }
+
+    //强制回主菜单的函数
+    public void ShowMainMenu()
+    {
+        if (introPanel != null) introPanel.SetActive(false);
+        if (mainPanel != null) mainPanel.SetActive(true);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
+        if (mapSelectPanel != null) mapSelectPanel.SetActive(false);
+        if (pausePanel != null) pausePanel.SetActive(false);
+    }
+
+    public void ShowIntro()
+    {
+        if (introPanel != null) introPanel.SetActive(true);
+        if (mainPanel != null) mainPanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
+        if (mapSelectPanel != null) mapSelectPanel.SetActive(false);
+        if (pausePanel != null) pausePanel.SetActive(false);
+    }
+
+    public void BackToMainFromIntro()
+    {
+        ShowMainMenu();
     }
 
     public void OpenMapSelect()
@@ -133,7 +160,7 @@ public class MenuUI : MonoBehaviour
             descriptionTitle.text = "监狱";
 
         if (descriptionText != null)
-            descriptionText.text = "你知道探照灯会暴露伪装在机器中的人类吗?";
+            descriptionText.text = "你知道探照灯会暴露伪装在人群中的人类吗\r\n当有真人玩家暴露在探照灯下，灯光将变为红色?";
     }
 
     public void ShowMap2Info()
@@ -142,7 +169,7 @@ public class MenuUI : MonoBehaviour
             descriptionTitle.text = "火山岛";
 
         if (descriptionText != null)
-           descriptionText.text = "你知道熔岩最终会吞没整座岛屿吗?";
+           descriptionText.text = "末日已经来临\r\n角色碰到岩浆将会直接死亡。随时间流逝，岩浆将逐步侵蚀小岛。";
     }
 
     public void ShowMap3Info()
@@ -151,17 +178,17 @@ public class MenuUI : MonoBehaviour
             descriptionTitle.text = "星舰";
 
         if (descriptionText != null)
-            descriptionText.text = "你知道外星人可能会为了研究而捕获机器人吗?";
+            descriptionText.text = "外星人为了研究会捕获机器人。\r\n当两个机器人相互碰撞时，两个机器人有概率直接消失";
     }
     
     // 添加第四个地图信息显示方法
     public void ShowMap4Info()
     {
         if (descriptionTitle != null)
-            descriptionTitle.text = "医院"; // 请在这里填写地图4的名称
+            descriptionTitle.text = "疗养院"; // 请在这里填写地图4的名称
 
         if (descriptionText != null)
-            descriptionText.text = "你知道一种致命病毒刚刚席卷了这家医院吗?"; // 请在这里填写地图4的描述
+            descriptionText.text = "一种致命病毒席卷了这里。无人生还。\r\n携带病毒的角色将在一段时间后自动死亡。被病毒携带者触碰的角色也将感染。场上没有病毒携带者时，随机感染一位角色。"; // 请在这里填写地图4的描述
     }
     
     public void ShowDefaultMapInfo()
