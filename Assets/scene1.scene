@@ -1110,7 +1110,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 576231a4ba144214baeee0d23dd1620d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  displayTime: 5
+  canvas: {fileID: 0}
+  player1CDText: {fileID: 845545635}
+  player2CDText: {fileID: 959282855}
+  startDelay: 5
 --- !u!1 &845545633
 GameObject:
   m_ObjectHideFlags: 0

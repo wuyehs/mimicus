@@ -19,7 +19,11 @@ public class CharacterLogic : MonoBehaviour
     public float shootRange = 10f;       
     public float bombRadius = 3f;     
     public float bombCountdown = 3f;  // 新增：炸弹倒计时时长
-    
+    [Header("UI 相关")]
+    public TextMeshProUGUI player1CDText;  // 分配给 Player1
+    public TextMeshProUGUI player2CDText;  // 分配给 Player2
+    private float currentAttackTimer = 0f;
+        
     [Header("炸弹倒计时UI")]
     public GameObject bombCountdownUI;  // 倒计时UI预制体
     
@@ -109,6 +113,7 @@ public class CharacterLogic : MonoBehaviour
         {
            UpdateInfection(); 
         } 
+        UpdateAttackCooldownDisplay();
         // 新增：炸弹倒计时更新
         if (bombActive)
         {
@@ -141,6 +146,45 @@ public class CharacterLogic : MonoBehaviour
             else if (currentRole == Role.Player2) HandleP2();
         }
     }
+
+    private void UpdateAttackCooldownDisplay()
+    {
+        float timeSinceAttack = Time.time - lastAttackTime;
+        float remainingTime = Mathf.Max(0, attackCooldown - timeSinceAttack);
+        
+        // 格式化显示（如 "5.0" 秒）
+        string displayText = remainingTime > 0 ? remainingTime.ToString("F1") + "s" : "Ready";
+        
+        // 根据角色更新对应的文本
+        if (currentRole == Role.Player1 && player1CDText != null)
+        {
+            player1CDText.text = "Player1: " + displayText;
+            
+            // 颜色变化：红色表示冷却中，绿色表示可用
+            if (remainingTime > 0)
+            {
+                player1CDText.color = Color.red;
+            }
+            else
+            {
+                player1CDText.color = Color.white;
+            }
+        }
+        else if (currentRole == Role.Player2 && player2CDText != null)
+        {
+            player2CDText.text = "Player2: " + displayText;
+            
+            if (remainingTime > 0)
+            {
+                player2CDText.color = Color.red;
+            }
+            else
+            {
+                player2CDText.color = Color.white;
+            }
+        }
+    }
+
 
     public void UpdateInfection()
     {
@@ -493,7 +537,7 @@ public class CharacterLogic : MonoBehaviour
 
         if (animator != null)
             animator.SetTrigger("Attack");
-
+        UpdateAttackCooldownDisplay();
         isAttacking = true;
         moveDir = Vector2.zero;
         isStopped = true;
@@ -507,8 +551,8 @@ public class CharacterLogic : MonoBehaviour
         
         float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
 
-        Vector2 boxSize = new Vector2(1.5f, 1.35f);
-        Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.65f;
+        Vector2 boxSize = new Vector2(0.5f, 0.45f);
+        Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.5f;
         hitBoxCenter.y += 1f;
 
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);

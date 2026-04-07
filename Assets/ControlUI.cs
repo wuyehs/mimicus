@@ -1,37 +1,62 @@
 using UnityEngine;
+using TMPro;
 using System.Collections;
 
-public class AutoHideCanvas : MonoBehaviour
+public class SimpleCDCanvas : MonoBehaviour
 {
-    [Header("显示时间设置")]
-    [SerializeField] private float displayTime = 5f;  // 显示时长，默认5秒
+    [Header("UI 组件")]
+    [SerializeField] private Canvas canvas;
+    [SerializeField] private TextMeshProUGUI player1CDText;
+    [SerializeField] private TextMeshProUGUI player2CDText;
     
-    private Canvas canvasComponent;
+    [SerializeField] private float startDelay = 5f;  // 5秒后才开始显示冷却时间
+    
+    private CharacterLogic player1;
+    private CharacterLogic player2;
     
     void Start()
     {
-        // 获取Canvas组件
-        canvasComponent = GetComponent<Canvas>();
+        if (canvas == null) canvas = GetComponent<Canvas>();
+        if (canvas != null) canvas.enabled = true;
         
-        if (canvasComponent != null)
-        {
-            // 启动计时器协程
-            StartCoroutine(HideAfterDelay());
-        }
-        else
-        {
-            Debug.LogError("当前GameObject没有Canvas组件！");
-        }
+        // 延迟后才设置Text引用
+        StartCoroutine(DelayedSetup());
     }
     
-    IEnumerator HideAfterDelay()
+    IEnumerator DelayedSetup()
     {
-        // 等待指定的秒数
-        yield return new WaitForSeconds(displayTime);
+        // 等待5秒
+        yield return new WaitForSeconds(startDelay);
         
-        // 禁用Canvas
-        canvasComponent.enabled = false;
+        // 5秒后才查找玩家并设置Text引用
+        FindPlayers();
         
-        Debug.Log($"Canvas 已在 {displayTime} 秒后隐藏");
+        if (player1 != null)
+        {
+            player1.player1CDText = player1CDText;
+        }
+        
+        if (player2 != null)
+        {
+            player2.player2CDText = player2CDText;
+        }
+        
+        Debug.Log($"5秒后开始显示冷却时间");
+    }
+    
+    void FindPlayers()
+    {
+        CharacterLogic[] characters = FindObjectsOfType<CharacterLogic>();
+        foreach (CharacterLogic character in characters)
+        {
+            if (character.currentRole == CharacterLogic.Role.Player1)
+            {
+                player1 = character;
+            }
+            else if (character.currentRole == CharacterLogic.Role.Player2)
+            {
+                player2 = character;
+            }
+        }
     }
 }
