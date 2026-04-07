@@ -63,7 +63,6 @@ public class CharacterLogic : MonoBehaviour
     public GameObject smokeEffectPrefab;
     
     private Camera mainCamera;
-    private float leftBound, rightBound, topBound, bottomBound;
     private bool bombAnimation = false;
 
     void Awake()
@@ -84,7 +83,6 @@ public class CharacterLogic : MonoBehaviour
     void Start()
     {
         mainCamera = Camera.main;
-        if (mainCamera != null) CalculateBounds();
 
         debugMode = GameManager.instance.debugMode;
         
@@ -237,50 +235,12 @@ public class CharacterLogic : MonoBehaviour
         }
     }
 
-    private void CalculateBounds()
-    {
-        float size = mainCamera.orthographicSize;
-        float aspect = mainCamera.aspect;
-        
-        float leftOffset = 1.5f;
-        float rightOffset = 1f;
-        float topOffset = 2.5f;
-        float bottomOffset = -0.3f;
-        
-        if (GameManager.instance != null && GameManager.instance.Map_id == 2)
-        {
-            leftOffset = 1.4f;
-            rightOffset = 2.8f;
-            topOffset = 3f;
-            bottomOffset = 1.4f;
-        }
-        else if(GameManager.instance.Map_id == 4)
-        {
-            leftOffset = 1.8f;
-            rightOffset = 1.8f;
-            topOffset = 2.7f;
-            bottomOffset = 0.5f;
-        }
-
-        rightBound = size * aspect - rightOffset;
-        leftBound = -(size * aspect - leftOffset);
-        
-        topBound = size - topOffset;
-        bottomBound = -(size - bottomOffset);
-    }
-
     private void LimitToScreen()
     {
         if (mainCamera == null) return;
         Vector2 pos = rb.position;
         Vector2 vel = rb.velocity;
         bool changed = false;
-
-        if (pos.x < leftBound) { pos.x = leftBound; vel.x = 0; changed = true; }
-        else if (pos.x > rightBound) { pos.x = rightBound; vel.x = 0; changed = true; }
-        
-        if (pos.y < bottomBound) { pos.y = bottomBound; vel.y = 0; changed = true; }
-        else if (pos.y > topBound) { pos.y = topBound; vel.y = 0; changed = true; }
 
         if (changed)
         {
@@ -554,7 +514,6 @@ public class CharacterLogic : MonoBehaviour
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
         ProcessHitTargets(hitColliders);
     }
-
     private void ProcessHitTargets(Collider2D[] hits)
     {
         CharacterLogic bestTarget = null;

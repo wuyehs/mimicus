@@ -13,11 +13,8 @@ public class GameManager : MonoBehaviour
     public bool debugMode = true;
     
     [Header("摄像机设置")]
-    [SerializeField] private float cameraSize = 5f;  // 图一二的相机大小
-    
-    [Header("图三专用相机设置")]
-    [Tooltip("Map_id=3时的相机大小（原始10f，缩小一半为5f）")]
-    [SerializeField] private float cameraSizeForMap3 = 5f;  // 原始10f → 5f（缩小一半）
+    [SerializeField] private float cameraSize = 5.5f;  // 图一二的相机大小
+
     
     [SerializeField] private Color backgroundColor = Color.black;
     
@@ -25,24 +22,6 @@ public class GameManager : MonoBehaviour
     public int Map_id = 1;
     public GameObject charPrefab;
     public int totalCharacters = 20;
-    
-    [Header("图三专用生成范围设置")]
-    [Tooltip("Map_id=3时的X轴范围（原始3.0f，缩小一半为1.5f）")]
-    [SerializeField] private float xRangeForMap3 = 1.5f;  // 原始3.0f → 1.5f
-    
-    [Tooltip("Map_id=3时的Y轴最大值（原始4.0f，缩小一半为2.0f）")]
-    [SerializeField] private float yMaxForMap3 = 2.0f;    // 原始4.0f → 2.0f
-    
-    [Tooltip("Map_id=3时的Y轴最小值（原始-4.0f，缩小一半为-2.0f）")]
-    [SerializeField] private float yMinForMap3 = -2.0f;   // 原始-4.0f → -2.0f
-    
-    [Header("图一二生成范围设置")]
-    [Tooltip("Map_id=1,2时的X轴范围")]
-    [SerializeField] private float xRangeForMap12 = 6.0f;
-    
-    [Header("Y轴范围（图一二）")]
-    [SerializeField] private float yMax = 4.0f;
-    [SerializeField] private float yMin = -4.0f;
     
     [Header("UI设置")]
     public TextMeshProUGUI winText;
@@ -58,16 +37,8 @@ public class GameManager : MonoBehaviour
         mainCamera = Camera.main;
         mainCamera.orthographic = true;
         
-        // 根据Map_id设置相机大小
-        if (Map_id == 3)
-        {
-            mainCamera.orthographicSize = cameraSizeForMap3;  // 缩小一半：5f
-        }
-        else
-        {
-            mainCamera.orthographicSize = cameraSize;  // 保持原来的5f
-        }
-        
+        mainCamera.orthographicSize = cameraSize;  // 保持原来的5f
+
         mainCamera.backgroundColor = backgroundColor;
         mainCamera.transform.position = new Vector3(0, 0, -10f);
     }
@@ -102,21 +73,10 @@ public class GameManager : MonoBehaviour
 
         // 根据Map_id选择不同的生成范围
         float currentXRange, currentYMax, currentYMin;
-        
-        if (Map_id == 3)
-        {
-            // 图三的生成范围（已缩小一半）
-            currentXRange = xRangeForMap3;  // 1.5f
-            currentYMax = yMaxForMap3;      // 2.0f
-            currentYMin = yMinForMap3;      // -2.0f
-        }
-        else
-        {
-            // 图一二的生成范围（保持不变）
-            currentXRange = xRangeForMap12; // 6.0f
-            currentYMax = yMax;             // 4.0f
-            currentYMin = yMin;             // -4.0f
-        }
+
+        currentXRange = 6f; // 6.0f
+        currentYMax = 3f;             // 4.0f
+        currentYMin = -3f;             // -4.0f
 
         while (!isPosValid && attempts < maxAttempts)
         {
