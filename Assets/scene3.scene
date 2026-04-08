@@ -738,8 +738,8 @@ Transform:
   m_GameObject: {fileID: 167410488}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: -0.0354, y: 4.0504, z: 0}
-  m_LocalScale: {x: 1.6974766, y: 17.635807, z: 1}
+  m_LocalPosition: {x: -0.0354, y: 5.1164, z: 0}
+  m_LocalScale: {x: 3.8295074, y: 17.635807, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1454,8 +1454,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   canvas: {fileID: 0}
-  player1CDText: {fileID: 0}
-  player2CDText: {fileID: 0}
+  player1CDText: {fileID: 230310560}
+  player2CDText: {fileID: 2145052414}
   startDelay: 5
 --- !u!114 &362210668
 MonoBehaviour:

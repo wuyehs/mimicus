@@ -1751,8 +1751,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   canvas: {fileID: 0}
-  player1CDText: {fileID: 0}
-  player2CDText: {fileID: 0}
+  player1CDText: {fileID: 144085931}
+  player2CDText: {fileID: 1544744873}
   startDelay: 5
 --- !u!114 &1438093930
 MonoBehaviour:
