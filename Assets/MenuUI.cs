@@ -142,6 +142,13 @@ public class MenuUI : MonoBehaviour
         SceneManager.LoadScene("Scene3"); // 修改为您的实际场景名称
     }
 
+     public void LoadMap5()
+    {
+        Time.timeScale = 1f;
+        Debug.Log("Loading Map 5...");
+        SceneManager.LoadScene("Scene4"); // 修改为您的实际场景名称
+    }
+
     public void SetVolume(float value)
     {
         if (bgmSource != null)
@@ -188,9 +195,16 @@ public class MenuUI : MonoBehaviour
             descriptionTitle.text = "疗养院"; // 请在这里填写地图4的名称
 
         if (descriptionText != null)
-            descriptionText.text = "一种致命病毒席卷了这里。无人生还。\r\n携带病毒的角色将在一段时间后自动死亡。被病毒携带者触碰的角色也将感染。场上没有病毒携带者时，随机感染一位角色。"; // 请在这里填写地图4的描述
+            descriptionText.text = "一种致命病毒席卷了这里。无人生还。\r\n携带病毒的角色将在一段时间后自动死亡。被病毒携带者触碰的角色也将感染。"; // 请在这里填写地图4的描述
     }
     
+    public void ShowMap5Info()
+    {
+        if(descriptionTitle != null)
+            descriptionTitle.text = "拳馆";
+        if(descriptionText != null)
+            descriptionText.text = "这是一个充满了激情的拳馆\r\n连机器人也被这种氛围所感染，在这里他们会不由自主地进行拳击训练，攻击面前的目标";
+    }
     public void ShowDefaultMapInfo()
     {
         if (descriptionTitle != null)

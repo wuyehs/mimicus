@@ -7,7 +7,7 @@ public class CharacterLogic : MonoBehaviour
 {
     public enum Role { Bot, Player1, Player2 }
     public Role currentRole = Role.Bot;
-
+    private float start_time = Time.time;
     public bool debugMode = false;
 
     // 统一的武器/工具系统
@@ -68,6 +68,13 @@ public class CharacterLogic : MonoBehaviour
     
     private Camera mainCamera;
     private bool bombAnimation = false;
+    
+    // 新增：地图5机器人攻击相关变量
+    [Header("地图5机器人设置")]
+    public float botAttackRange = 1.5f;         // 机器人攻击范围
+    public float botAttackDetectionRadius = 3f; // 机器人检测敌人的范围
+    public float botAttackCooldown = 2f;        // 机器人攻击冷却时间
+    private float botLastAttackTime = 0f;       // 机器人上次攻击时间
 
     void Awake()
     {
@@ -87,10 +94,15 @@ public class CharacterLogic : MonoBehaviour
     void Start()
     {
         mainCamera = Camera.main;
+        start_time = Time.time;
 
         debugMode = GameManager.instance.debugMode;
         
-        if (currentRole == Role.Bot) StartCoroutine(BotRoutine());
+        if (currentRole == Role.Bot) 
+        {
+                // 其他地图：普通机器人逻辑
+            StartCoroutine(BotRoutine());
+        }
 
         if (animator != null && animator.runtimeAnimatorController != null)
         {
@@ -344,6 +356,42 @@ public class CharacterLogic : MonoBehaviour
         return Time.time - lastAttackTime >= attackCooldown && !isAttacking && !isDead;
     }
     
+    // 新增：机器人专用攻击检查
+    bool CanBotAttack()
+    {
+        return Time.time - botLastAttackTime >= botAttackCooldown && !isAttacking && !isDead;
+    }
+    
+    // 新增：机器人执行攻击
+    private void BotAttack()
+    {
+        if (isDead || isAttacking || !CanBotAttack()) return;        
+        botLastAttackTime = Time.time;
+
+        if (animator != null)
+            animator.SetTrigger("Attack");
+        
+        isAttacking = true;
+        moveDir = Vector2.zero;
+        isStopped = true;
+
+        StartCoroutine(WaitForAttackEnd());
+        if (spriteRenderer != null)
+            StartCoroutine(AttackFlash());
+
+        Vector2 attackDir = lastMoveDir.normalized;
+        if (attackDir == Vector2.zero) attackDir = Vector2.right;
+        
+        float angle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
+
+        Vector2 boxSize = new Vector2(0.5f, 0.45f);
+        Vector2 hitBoxCenter = (Vector2)transform.position + attackDir * 0.5f;
+        hitBoxCenter.y += 1f;
+
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
+        ProcessHitTargets(hitColliders);
+    }
+    
     void UseTool()
     {
         if (currentTool == ToolType.Gun)
@@ -558,6 +606,17 @@ public class CharacterLogic : MonoBehaviour
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(hitBoxCenter, boxSize, angle);
         ProcessHitTargets(hitColliders);
     }
+    
+    // 新增：检测附近是否有玩家
+    private bool HasPlayerInRange()
+    {
+        if (currentRole != Role.Bot) return false;
+        
+        Collider2D[] nearbyColliders = Physics2D.OverlapCircleAll(transform.position, botAttackDetectionRadius);
+        if(nearbyColliders != null)return true;
+        return false;        
+    }
+    
     private void ProcessHitTargets(Collider2D[] hits)
     {
         CharacterLogic bestTarget = null;
@@ -634,7 +693,7 @@ public class CharacterLogic : MonoBehaviour
                 SpriteRenderer sr = newBot.GetComponent<SpriteRenderer>();
                 if (sr != null) sr.color = Color.gray;
             }
-            // 可选：添加短暂无敌或标记为“幻影”（此处无特殊行为）
+            // 可选：添加短暂无敌或标记为"幻影"（此处无特殊行为）
         }
 
         // 5. 播放召唤特效（复用传送特效）
@@ -667,7 +726,51 @@ public class CharacterLogic : MonoBehaviour
     }
     // ==================== 召唤逻辑结束 ====================
 
-    
+    IEnumerator BotRoutine()
+    {
+        while (true)
+        {
+            if (isDead) yield break;
+
+            if (!isAttacking)
+            {
+                int behavior = Random.Range(0, 12);
+                if(behavior <=4)
+                {
+                    if(GameManager.instance.Map_id == 5 && behavior == 0)
+                    {
+                        bool playerInRange = HasPlayerInRange();
+                        if (playerInRange && CanBotAttack() && Time.time - start_time >= 5f)
+                        {
+                            BotAttack();
+                            yield return new WaitForSeconds(attackAnimLength > 0 ? attackAnimLength : 0.5f);
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        isStopped = true;
+                        moveDir = Vector2.zero;
+                        float stopTime = Random.Range(0.3f, 1.5f);
+                        yield return new WaitForSeconds(stopTime);
+                    }
+                }
+                else
+                {
+                    float angle = Random.Range(0f, 360f);
+                    moveDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
+                    lastMoveDir = moveDir;
+                    isStopped = false;
+                    float moveTime = Random.Range(0.3f, 1f);
+                    yield return new WaitForSeconds(moveTime);
+                }
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
+    }
 
     IEnumerator DieAndDestroyAfterAnimation()
     {
@@ -693,39 +796,6 @@ public class CharacterLogic : MonoBehaviour
                 (currentRole == Role.Player1 ? Color.blue : 
                  currentRole == Role.Player2 ? Color.red : 
                  currentRole == Role.Bot ? Color.gray : defaultColor) : defaultColor;
-        }
-    }
-
-    IEnumerator BotRoutine()
-    {
-        while (true)
-        {
-            if (isDead) yield break;
-
-            if (!isAttacking)
-            {
-                int behavior = Random.Range(0, 3);
-                if (behavior != 0)
-                {
-                    float angle = Random.Range(0f, 360f);
-                    moveDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
-                    lastMoveDir = moveDir;
-                    isStopped = false;
-                    float moveTime = Random.Range(0.3f, 1f);
-                    yield return new WaitForSeconds(moveTime);
-                }
-                else
-                {
-                    isStopped = true;
-                    moveDir = Vector2.zero;
-                    float stopTime = Random.Range(0.3f, 1.5f);
-                    yield return new WaitForSeconds(stopTime);
-                }
-            }
-            else
-            {
-                yield return new WaitForSeconds(0.1f);
-            }
         }
     }
 
