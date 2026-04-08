@@ -3306,8 +3306,8 @@ MonoBehaviour:
   m_text: kdfja;dskljfasgfajgiaop
   m_enableAdvanceTextProcess: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 1ce7a5ecac040914bb24459e68f0d73d, type: 2}
-  m_sharedMaterial: {fileID: 1267872089811173673, guid: 1ce7a5ecac040914bb24459e68f0d73d, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: ffaff76f17ddeec40adc5061e932aff8, type: 2}
+  m_sharedMaterial: {fileID: -7391832759082474591, guid: ffaff76f17ddeec40adc5061e932aff8, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
