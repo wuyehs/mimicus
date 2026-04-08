@@ -7,7 +7,7 @@ public class CharacterLogic : MonoBehaviour
 {
     public enum Role { Bot, Player1, Player2 }
     public Role currentRole = Role.Bot;
-    private float start_time = Time.time;
+    private float start_time;
     public bool debugMode = false;
 
     // 统一的武器/工具系统
