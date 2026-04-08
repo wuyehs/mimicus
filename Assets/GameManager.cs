@@ -78,6 +78,17 @@ public class GameManager : MonoBehaviour
         currentYMax = 3f;             // 4.0f
         currentYMin = -3f;             // -4.0f
 
+        switch (Map_id)
+        {
+            
+            case 3:
+                currentXRange = 3.5f; currentYMax = 1.8f; currentYMin = -1.8f;
+                break;
+            default:
+                currentXRange = 6f; currentYMax = 3f; currentYMin = -3f;
+                break;
+        }
+
         while (!isPosValid && attempts < maxAttempts)
         {
             attempts++;
